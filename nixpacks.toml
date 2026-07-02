@@ -1,0 +1,4 @@
+# Railway (Nixpacks) build config. Node is pinned to 22 via .nvmrc + engines.
+# Pure-JS/WASM runtime (three, rapier3d-compat, ws) — no native compilation needed.
+[phases.setup]
+nixPkgs = ["nodejs_22"]
