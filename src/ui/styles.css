@@ -27,7 +27,10 @@ body {
 #hud { position: absolute; inset: 0; }
 .hidden { display: none !important; }
 
-button { font-family: inherit; border: none; cursor: pointer; }
+button { font-family: inherit; border: none; cursor: pointer; touch-action: manipulation; }
+/* tappable overlays: kill the 300ms double-tap-zoom delay so taps register instantly */
+.icon-btn, .round-btn, #launch-btn, .block-chip, .primary-btn, .mini-btn, .swatch-btn, #start-btn { touch-action: manipulation; }
+.palette { touch-action: pan-x; }
 
 .coin {
   display: inline-block; width: 14px; height: 14px; border-radius: 50%;
@@ -168,12 +171,17 @@ button { font-family: inherit; border: none; cursor: pointer; }
 #launch-btn:active { transform: scale(0.96); }
 
 /* ---------------- sail controls ---------------- */
-#sail-controls { position: absolute; inset: 0; pointer-events: none; }
+/* touch-action:none on every interactive control is critical on mobile —
+   without it the webview claims drags as scroll gestures and fires
+   pointercancel, which kills the joystick mid-steer. */
+#sail-controls { position: absolute; inset: 0; pointer-events: none; touch-action: none; }
 .joy-zone {
   position: absolute; left: 0; bottom: 0;
   width: 55%; height: 52%;
   pointer-events: auto;
+  touch-action: none;
 }
+.joy-base, .joy-thumb, .sail-btns, .btn-jump, .btn-boost { touch-action: none; }
 .joy-base {
   position: absolute;
   left: 110px; top: 72%;

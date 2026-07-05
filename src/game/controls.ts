@@ -24,8 +24,8 @@ export class Controls {
         <div class="joy-base"><div class="joy-thumb"></div></div>
       </div>
       <div class="sail-btns">
-        <button class="btn-jump" aria-label="jump">JUMP</button>
-        <button class="btn-boost" aria-label="boost"><i class="ring"></i><span>BOOST</span></button>
+        <button class="btn-jump" aria-label="jump">ПРЫЖОК</button>
+        <button class="btn-boost" aria-label="boost"><i class="ring"></i><span>БУСТ</span></button>
       </div>`;
     uiRoot.appendChild(this.root);
     this.base = this.root.querySelector('.joy-base')!;
@@ -37,23 +37,26 @@ export class Controls {
     zone.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.joyPointer = e.pointerId;
-      zone.setPointerCapture(e.pointerId);
+      // capture can throw on some webviews; never let it abort the handler
+      try { zone.setPointerCapture(e.pointerId); } catch {}
       this.joyOrigin = { x: e.clientX, y: e.clientY };
       this.base.style.left = `${e.clientX}px`;
       this.base.style.top = `${e.clientY}px`;
       this.base.classList.add('active');
-    });
+    }, { passive: false });
     zone.addEventListener('pointermove', (e) => {
       if (e.pointerId !== this.joyPointer) return;
+      e.preventDefault();
       const dx = e.clientX - this.joyOrigin.x;
       const dy = e.clientY - this.joyOrigin.y;
       const cl = Math.max(-52, Math.min(52, dx));
       const clY = Math.max(-52, Math.min(52, dy));
       this.thumb.style.transform = `translate(${cl}px, ${clY}px)`;
       this.touchSteer = Math.max(-1, Math.min(1, dx / 48));
-    });
+    }, { passive: false });
     const joyEnd = (e: PointerEvent) => {
       if (e.pointerId !== this.joyPointer) return;
+      try { zone.releasePointerCapture(e.pointerId); } catch {}
       this.joyPointer = null;
       this.touchSteer = 0;
       this.thumb.style.transform = 'translate(0,0)';
@@ -61,15 +64,23 @@ export class Controls {
     };
     zone.addEventListener('pointerup', joyEnd);
     zone.addEventListener('pointercancel', joyEnd);
+    zone.addEventListener('lostpointercapture', () => {
+      // if the system yanks capture, stop steering rather than sticking on
+      this.joyPointer = null;
+      this.touchSteer = 0;
+      this.thumb.style.transform = 'translate(0,0)';
+      this.base.classList.remove('active');
+    });
 
-    this.boostBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      this.onBoost?.();
-    });
-    this.jumpBtn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      this.onJump?.();
-    });
+    const tapBtn = (btn: HTMLElement, fn: () => void) => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fn();
+      }, { passive: false });
+    };
+    tapBtn(this.boostBtn, () => this.onBoost?.());
+    tapBtn(this.jumpBtn, () => this.onJump?.());
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;

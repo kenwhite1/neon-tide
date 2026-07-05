@@ -50,7 +50,7 @@ async function boot() {
     onLaunch: () => {
       if (state.phase !== 'build') return;
       if (net.inRoom && !net.isHost) {
-        hud.toast('Only the host can launch — nag them!');
+        hud.toast('Запускать может только хост — попроси его!');
         sfx.play('deny');
         return;
       }
@@ -69,12 +69,12 @@ async function boot() {
     onUndo: () => builder.undo(),
     onClear: () => {
       builder.clearAll(true);
-      hud.toast('Plot cleared — blocks refunded');
+      hud.toast('Участок очищен — блоки возвращены');
     },
     onColor: (i) => builder.setAccent(TEAM_COLORS[i]),
     onShareBoat: () => {
-      tg.share(`boat_${builder.shareCode()}`, '⚓ My NEON TIDE boat — load it and beat my run!');
-      hud.toast(tg.isReal ? 'Share sheet opened' : 'Share link copied to clipboard');
+      tg.share(`boat_${builder.shareCode()}`, '⚓ Моя лодка в NEON TIDE — загрузи и побей мой заплыв!');
+      hud.toast(tg.isReal ? 'Окно «Поделиться» открыто' : 'Ссылка скопирована в буфер');
     },
   });
   (hud as any).selectedKind = 'wood';
@@ -92,7 +92,7 @@ async function boot() {
     const d = Builder.decodeShare(tg.startParam.slice(5));
     if (d) {
       const res = builder.importShared(d);
-      hud.toast(`Boat imported — ${res.placed} blocks${res.skipped ? `, ${res.skipped} skipped (can't afford)` : ''}`);
+      hud.toast(`Лодка загружена — ${res.placed} блоков${res.skipped ? `, ${res.skipped} пропущено (не хватило золота)` : ''}`);
     }
   }
 
@@ -106,10 +106,10 @@ async function boot() {
   net.onJoined = (design) => {
     if (design.length) builder.loadDesign(design);
     else if (net.isHost) net.sendDesign(builder.design());
-    hud.toast(`⚓ Room ${net.room} — you're ${net.isHost ? 'the HOST' : 'crew'}`);
+    hud.toast(`⚓ Комната ${net.room} — ты ${net.isHost ? 'ХОСТ' : 'в команде'}`);
   };
   net.onPlayers = () => {
-    if (net.inRoom) hud.toast(`Crew: ${net.players.map((p) => p.name).join(', ')}`);
+    if (net.inRoom) hud.toast(`Команда: ${net.players.map((p) => p.name).join(', ')}`);
   };
   net.onLaunch = () => {
     if (state.phase === 'build') sail.begin(builder.design(), true);
@@ -122,15 +122,15 @@ async function boot() {
     else if (ev.k === 'treasure') sail.guestTreasure(ev.gold);
   };
   net.onError = (m) => hud.toast(`⚠️ ${m}`);
-  net.onLeft = () => hud.toast('Left the room — back to solo');
+  net.onLeft = () => hud.toast('Вышел из комнаты — снова соло');
 
   const renderMp = (slot: HTMLElement) => {
     if (!net.inRoom) {
       slot.innerHTML = `
-        <div class="set-row"><span>Multiplayer</span><span style="display:flex;gap:6px">
-          <button class="mini-btn" id="mp-create">CREATE ROOM</button>
-          <button class="mini-btn" id="mp-join">JOIN</button></span></div>
-        <div id="mp-join-row" class="hidden set-row"><input id="mp-code" maxlength="5" placeholder="CODE" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:14px;min-width:0"/><button class="mini-btn" id="mp-go">GO</button></div>`;
+        <div class="set-row"><span>Мультиплеер</span><span style="display:flex;gap:6px">
+          <button class="mini-btn" id="mp-create">СОЗДАТЬ</button>
+          <button class="mini-btn" id="mp-join">ВОЙТИ</button></span></div>
+        <div id="mp-join-row" class="hidden set-row"><input id="mp-code" maxlength="5" placeholder="КОД" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:14px;min-width:0"/><button class="mini-btn" id="mp-go">ОК</button></div>`;
       slot.querySelector('#mp-create')!.addEventListener('click', () => {
         net.join(null)
           .then(() => renderMp(slot))
@@ -149,12 +149,12 @@ async function boot() {
       });
     } else {
       slot.innerHTML = `
-        <div class="set-row"><span>Room <b style="color:var(--accent);letter-spacing:2px">${net.room}</b>${net.isHost ? ' 👑' : ''}</span>
-        <span style="display:flex;gap:6px"><button class="mini-btn" id="mp-invite">INVITE</button><button class="mini-btn danger" id="mp-leave">LEAVE</button></span></div>
+        <div class="set-row"><span>Комната <b style="color:var(--accent);letter-spacing:2px">${net.room}</b>${net.isHost ? ' 👑' : ''}</span>
+        <span style="display:flex;gap:6px"><button class="mini-btn" id="mp-invite">ПРИГЛАСИТЬ</button><button class="mini-btn danger" id="mp-leave">ВЫЙТИ</button></span></div>
         <div style="font-size:12px;opacity:.7;font-weight:600;padding:4px 2px">${net.players.map((p) => p.name).join(' · ')}</div>`;
       slot.querySelector('#mp-invite')!.addEventListener('click', () => {
-        tg.share(net.room, `⚓ Join my NEON TIDE crew! Room code: ${net.room}`);
-        hud.toast(tg.isReal ? 'Invite sheet opened' : 'Invite link copied');
+        tg.share(net.room, `⚓ Заходи в мою команду NEON TIDE! Код комнаты: ${net.room}`);
+        hud.toast(tg.isReal ? 'Окно приглашения открыто' : 'Ссылка-приглашение скопирована');
       });
       slot.querySelector('#mp-leave')!.addEventListener('click', () => {
         net.leave();

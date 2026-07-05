@@ -63,7 +63,7 @@ export class Sail {
       this.d.hud.setHull(this.hullFrac());
     });
     d.fleet.on('primarySwitch', () => {
-      this.d.hud.toast('Boat split! Following your seat');
+      this.d.hud.toast('Лодка раскололась! Летим за сиденьем');
       this.d.cameraRig.shake(0.4);
     });
     d.controls.onBoost = () => this.fireBoost();
@@ -136,7 +136,7 @@ export class Sail {
     this.avatar.position.set(0, 0.2, 0.1);
     this.avatarSeat = seat.b;
     if (hopped) {
-      this.d.hud.toast('Hopped to another seat!');
+      this.d.hud.toast('Перепрыгнул на другое сиденье!');
       this.d.sfx.play('jump');
     }
   }
@@ -159,7 +159,7 @@ export class Sail {
       if (this.launchT >= 3) {
         this.sailing = true;
         hydro.sailing = true;
-        this.d.hud.countdown('GO!');
+        this.d.hud.countdown('ВПЕРЁД!');
         this.d.state.setPhase('sailing');
       }
     }
@@ -240,7 +240,7 @@ export class Sail {
     if (!boat) return;
     const thrusters = this.d.fleet.aliveOf('thruster').filter((t) => t.c === boat);
     if (!thrusters.length) {
-      this.d.hud.toast('No thrusters on board');
+      this.d.hud.toast('Нет двигателей на борту');
       this.d.sfx.play('deny');
       return;
     }
@@ -276,7 +276,7 @@ export class Sail {
   }
 
   private abort() {
-    if (this.active && !this.treasureStarted) this.end('Returned to port', false);
+    if (this.active && !this.treasureStarted) this.end('Возврат в порт', false);
   }
 
   /** Per render-frame logic (stages, hazard states, end conditions, FX). */
@@ -354,7 +354,7 @@ export class Sail {
     // waterfall survival flag
     if (t.z > Z_WF + 8 && t.y < -6 && !state.waterfallFlag) {
       state.waterfallFlag = true;
-      hud.toast('🌊 Survived the waterfall!');
+      hud.toast('🌊 Пережил водопад!');
     }
 
     // guests replicate the host's verdicts — no local stage awards or endings
@@ -376,7 +376,7 @@ export class Sail {
 
     // end conditions ------------------------------------------------
     if (!fleet.firstAliveSeat()) {
-      this.end('Your seat was destroyed', false);
+      this.end('Сиденье уничтожено', false);
       return;
     }
     if (this.avatarSeat) {
@@ -386,7 +386,7 @@ export class Sail {
       if (V.y < lvl - 1.1) {
         this.drownT += dt;
         if (this.drownT > 1.25) {
-          this.end('Your captain went under', false);
+          this.end('Капитан ушёл под воду', false);
           return;
         }
       } else this.drownT = Math.max(0, this.drownT - dt * 2);
@@ -395,11 +395,11 @@ export class Sail {
       this.lastProgressZ = t.z;
       this.lastProgressT = this.t;
     } else if (this.t - this.lastProgressT > 18 && speed < 0.6) {
-      this.end('Marooned — no headway', false);
+      this.end('Застрял — нет хода', false);
       return;
     }
     if (t.y < -55) {
-      this.end('Lost at sea', false);
+      this.end('Пропал в пучине', false);
       return;
     }
 
@@ -431,7 +431,7 @@ export class Sail {
       hud.treasure(payout, () => {
         state.award(payout);
         this.goldEarned += payout;
-        this.end('Treasure claimed!', true);
+        this.end('Сокровище забрано!', true);
       });
       this.d.particles.confetti(course.chest.position.clone().add(new THREE.Vector3(0, 2, 0)));
     }, 1500);
@@ -484,7 +484,7 @@ export class Sail {
       this.d.hud.treasure(gold, () => {
         this.d.state.award(gold);
         this.goldEarned += gold;
-        this.end('Treasure claimed!', true);
+        this.end('Сокровище забрано!', true);
       });
       this.d.particles.confetti(this.d.course.chest.position.clone().add(new THREE.Vector3(0, 2, 0)));
     }, 1500);

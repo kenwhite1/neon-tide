@@ -69,9 +69,9 @@ export const ECON = {
 };
 
 export const TIERS = [
-  { name: 'GREEN', color: 0x35e06f, css: '#35e06f' },
-  { name: 'YELLOW', color: 0xffd23f, css: '#ffd23f' },
-  { name: 'RED', color: 0xff4d5e, css: '#ff4d5e' },
+  { name: 'ЛЁГКИЙ', color: 0x35e06f, css: '#35e06f' },
+  { name: 'СРЕДНИЙ', color: 0xffd23f, css: '#ffd23f' },
+  { name: 'СЛОЖНЫЙ', color: 0xff4d5e, css: '#ff4d5e' },
 ];
 export const tierOfStage = (i: number) => (i < 3 ? 0 : i < 6 ? 1 : 2);
 
@@ -79,15 +79,15 @@ export const TEAM_COLORS = [0x66e0ff, 0x4d7bff, 0x35e06f, 0xff4d5e, 0xf3f6ff, 0x
 
 // ---------- block catalog ----------
 export const BLOCKS: Record<BlockKind, BlockDef> = {
-  wood: { kind: 'wood', label: 'Wood', cost: 3, hp: 35, density: 420, color: 0xb97a45, rough: 0.78, metal: 0.02, desc: 'Cheap, floaty, breaks fast' },
-  plastic: { kind: 'plastic', label: 'Plastic', cost: 5, hp: 55, density: 560, color: 0x3ec3ff, rough: 0.2, metal: 0.05, desc: 'Light and slick' },
-  metal: { kind: 'metal', label: 'Metal', cost: 10, hp: 115, density: 1650, color: 0xbac7d5, rough: 0.32, metal: 0.95, desc: 'Armor — sinks without hull' },
-  gold: { kind: 'gold', label: 'Gold', cost: 25, hp: 145, density: 2300, color: 0xffc94d, rough: 0.16, metal: 1, emissive: 0x3a2a00, emissiveIntensity: 0.25, desc: 'Heavy. Shiny. Immortal-ish' },
-  seat: { kind: 'seat', label: 'Seat', cost: 8, hp: 62, density: 480, color: 0x8a5cff, rough: 0.4, metal: 0.3, emissive: 0x2a1560, emissiveIntensity: 0.5, desc: 'Your captain rides here', functional: true, dir: true },
-  rudder: { kind: 'rudder', label: 'Rudder', cost: 10, hp: 45, density: 520, color: 0x37e6c8, rough: 0.35, metal: 0.5, emissive: 0x0b4a40, emissiveIntensity: 0.5, desc: '+ steering authority', functional: true, dir: true },
-  thruster: { kind: 'thruster', label: 'Thruster', cost: 30, hp: 55, density: 850, color: 0x2a3346, rough: 0.3, metal: 0.8, emissive: 0x0d3a4a, emissiveIntensity: 0.6, desc: 'Burst of speed, cooldown', functional: true, dir: true },
-  balloon: { kind: 'balloon', label: 'Balloon', cost: 15, hp: 14, density: 90, color: 0xff5c8a, rough: 0.35, metal: 0, emissive: 0x40101f, emissiveIntensity: 0.4, desc: 'Lift! Pops easily', functional: true },
-  tnt: { kind: 'tnt', label: 'TNT', cost: 12, hp: 30, density: 520, color: 0xff3b30, rough: 0.5, metal: 0.1, emissive: 0x4a0d08, emissiveIntensity: 0.5, desc: 'Explodes on hard impact', functional: true },
+  wood: { kind: 'wood', label: 'Дерево', cost: 3, hp: 35, density: 420, color: 0xb97a45, rough: 0.78, metal: 0.02, desc: 'Дёшево, отлично плавает, быстро ломается' },
+  plastic: { kind: 'plastic', label: 'Пластик', cost: 5, hp: 55, density: 560, color: 0x3ec3ff, rough: 0.2, metal: 0.05, desc: 'Лёгкий и скользкий' },
+  metal: { kind: 'metal', label: 'Металл', cost: 10, hp: 115, density: 1650, color: 0xbac7d5, rough: 0.32, metal: 0.95, desc: 'Броня — тонет без корпуса' },
+  gold: { kind: 'gold', label: 'Золото', cost: 25, hp: 145, density: 2300, color: 0xffc94d, rough: 0.16, metal: 1, emissive: 0x3a2a00, emissiveIntensity: 0.25, desc: 'Тяжёлое, блестит, почти не ломается' },
+  seat: { kind: 'seat', label: 'Сиденье', cost: 8, hp: 62, density: 480, color: 0x8a5cff, rough: 0.4, metal: 0.3, emissive: 0x2a1560, emissiveIntensity: 0.5, desc: 'Здесь едет твой капитан', functional: true, dir: true },
+  rudder: { kind: 'rudder', label: 'Руль', cost: 10, hp: 45, density: 520, color: 0x37e6c8, rough: 0.35, metal: 0.5, emissive: 0x0b4a40, emissiveIntensity: 0.5, desc: '+ управляемость', functional: true, dir: true },
+  thruster: { kind: 'thruster', label: 'Двигатель', cost: 30, hp: 55, density: 850, color: 0x2a3346, rough: 0.3, metal: 0.8, emissive: 0x0d3a4a, emissiveIntensity: 0.6, desc: 'Рывок скорости, есть перезарядка', functional: true, dir: true },
+  balloon: { kind: 'balloon', label: 'Шар', cost: 15, hp: 14, density: 90, color: 0xff5c8a, rough: 0.35, metal: 0, emissive: 0x40101f, emissiveIntensity: 0.4, desc: 'Подъём! Легко лопается', functional: true },
+  tnt: { kind: 'tnt', label: 'Динамит', cost: 12, hp: 30, density: 520, color: 0xff3b30, rough: 0.5, metal: 0.1, emissive: 0x4a0d08, emissiveIntensity: 0.5, desc: 'Взрывается от сильного удара', functional: true },
 };
 export const PALETTE_ORDER: BlockKind[] = ['wood', 'plastic', 'metal', 'gold', 'seat', 'rudder', 'thruster', 'balloon', 'tnt'];
 
@@ -171,9 +171,9 @@ export const STAGES: ObSpec[][] = [
 ];
 
 export const QUESTS = [
-  { id: 'stage5', label: 'Reach Stage 5', gold: 40 },
-  { id: 'woodrun', label: 'Finish a run — wood & seat only', gold: 75 },
-  { id: 'waterfall', label: 'Survive the waterfall', gold: 50 },
+  { id: 'stage5', label: 'Дойти до этапа 5', gold: 40 },
+  { id: 'woodrun', label: 'Пройти заплыв — только дерево и сиденье', gold: 75 },
+  { id: 'waterfall', label: 'Пережить водопад', gold: 50 },
 ];
 
 export const SAVE_KEY = 'neon-tide-v1';

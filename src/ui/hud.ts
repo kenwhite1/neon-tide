@@ -52,11 +52,11 @@ export class Hud {
         <div class="palette" id="palette"></div>
         <div class="side-actions">
           <div class="row">
-            <button class="round-btn" id="undo-btn" title="undo">⟲</button>
-            <button class="round-btn" id="rotate-btn" title="rotate">⟳</button>
-            <button class="round-btn" id="delete-btn" title="delete mode">✕</button>
+            <button class="round-btn" id="undo-btn" title="отменить">⟲</button>
+            <button class="round-btn" id="rotate-btn" title="повернуть">⟳</button>
+            <button class="round-btn" id="delete-btn" title="режим удаления">✕</button>
           </div>
-          <button id="launch-btn">LAUNCH ▶</button>
+          <button id="launch-btn">СТАРТ ▶</button>
         </div>
       </div>
       <div id="banner"></div>
@@ -91,7 +91,7 @@ export class Hud {
     });
     this.state.on('inv', () => this.refreshPalette());
     this.state.on('quest', (q: { label: string; gold: number }) => {
-      this.toast(`✓ QUEST — ${q.label} · +${q.gold} gold`);
+      this.toast(`✓ КВЕСТ — ${q.label} · +${q.gold} золота`);
       this.sfx.play('win');
     });
 
@@ -125,13 +125,13 @@ export class Hud {
   setStage(n: number) {
     const chip = this.q('stage-chip');
     if (n <= 0) {
-      chip.textContent = 'DOCK';
+      chip.textContent = 'ПРИЧАЛ';
       chip.style.color = 'var(--accent)';
       chip.style.borderColor = 'color-mix(in srgb, var(--accent) 40%, transparent)';
       return;
     }
     const tier = TIERS[tierOfStage(n - 1)];
-    chip.textContent = `STAGE ${n} · ${tier.name}`;
+    chip.textContent = `ЭТАП ${n} · ${tier.name}`;
     chip.style.color = tier.css;
     chip.style.borderColor = tier.css + '66';
   }
@@ -146,7 +146,7 @@ export class Hud {
   stagePopup(n: number, gold: number) {
     const tier = TIERS[tierOfStage(n - 1)];
     const b = this.q('banner');
-    b.innerHTML = `<div class="banner-stage" style="color:${tier.css}">STAGE ${n} — ${tier.name}</div><div class="banner-gold">+${gold} ${coin}</div>`;
+    b.innerHTML = `<div class="banner-stage" style="color:${tier.css}">ЭТАП ${n} — ${tier.name}</div><div class="banner-gold">+${gold} ${coin}</div>`;
     b.classList.remove('show');
     void b.offsetWidth;
     b.classList.add('show');
@@ -183,7 +183,7 @@ export class Hud {
         <span class="swatch" style="background:${colorHex}"></span>
         <span class="bl">${def.label}</span>
         <span class="badge">${owned > 0 ? '×' + owned : `<i class="coin s"></i>${def.cost}`}</span>`;
-      chip.title = `${def.desc} — HP ${def.hp}${owned > 0 ? '' : ` · costs ${def.cost} gold`}`;
+      chip.title = `${def.desc} — прочность ${def.hp}${owned > 0 ? '' : ` · стоит ${def.cost} золота`}`;
       chip.addEventListener('click', () => {
         (this as any).selectedKind = kind;
         this.deleteOn = false;
@@ -213,7 +213,7 @@ export class Hud {
   // ---------------- quests ----------------
   refreshQuests() {
     const p = this.q('quest-panel');
-    p.innerHTML = `<div class="panel-title">QUESTS</div>` + QUESTS.map((q) => {
+    p.innerHTML = `<div class="panel-title">КВЕСТЫ</div>` + QUESTS.map((q) => {
       const done = this.state.questsDone.has(q.id);
       return `<div class="quest ${done ? 'done' : ''}"><span>${done ? '✓' : '○'} ${q.label}</span><span class="qg">+${q.gold} ${coin}</span></div>`;
     }).join('');
@@ -237,18 +237,18 @@ export class Hud {
   }
 
   summary(stats: RunStats, best: number, onRebuild: () => void) {
-    const title = stats.finished ? '🏆 RUN COMPLETE!' : 'WRECKED';
+    const title = stats.finished ? '🏆 ЗАПЛЫВ ПРОЙДЕН!' : 'КРУШЕНИЕ';
     const m = this.modal(`
       <div class="modal-title ${stats.finished ? 'gold' : 'red'}">${title}</div>
       <div class="modal-sub">${stats.reason}</div>
       <div class="stat-rows">
-        <div><span>Stage reached</span><b>${stats.stage} / 8${stats.finished ? ' + END' : ''}</b></div>
-        <div><span>Gold earned</span><b class="gold">+${stats.goldEarned}</b></div>
-        <div><span>Run time</span><b>${stats.time.toFixed(1)}s</b></div>
-        <div><span>Blocks lost</span><b>${stats.blocksLost}</b></div>
-        <div><span>Best stage</span><b>${best}${best >= 8 ? ' 🏆' : ''}</b></div>
+        <div><span>Дошёл до этапа</span><b>${stats.stage} / 8${stats.finished ? ' + ФИНИШ' : ''}</b></div>
+        <div><span>Золота получено</span><b class="gold">+${stats.goldEarned}</b></div>
+        <div><span>Время заплыва</span><b>${stats.time.toFixed(1)}с</b></div>
+        <div><span>Потеряно блоков</span><b>${stats.blocksLost}</b></div>
+        <div><span>Лучший этап</span><b>${best}${best >= 8 ? ' 🏆' : ''}</b></div>
       </div>
-      <button class="primary-btn" id="rebuild-btn">REBUILD & RELAUNCH</button>
+      <button class="primary-btn" id="rebuild-btn">ПЕРЕСОБРАТЬ И ЗАПУСК</button>
     `, { dismiss: false });
     m.querySelector('#rebuild-btn')!.addEventListener('click', () => {
       this.closeModal();
@@ -259,10 +259,10 @@ export class Hud {
   treasure(amount: number, onCollect: () => void) {
     const m = this.modal(`
       <div class="rays"></div>
-      <div class="modal-title gold big">TREASURE!</div>
+      <div class="modal-title gold big">СОКРОВИЩЕ!</div>
       <div class="treasure-count" id="t-count">0</div>
-      <div class="modal-sub">The chest creaks open…</div>
-      <button class="primary-btn gold-btn" id="collect-btn">COLLECT ${amount} GOLD</button>
+      <div class="modal-sub">Сундук со скрипом открывается…</div>
+      <button class="primary-btn gold-btn" id="collect-btn">ЗАБРАТЬ ${amount} ЗОЛОТА</button>
     `, { dismiss: false });
     const countEl = m.querySelector('#t-count') as HTMLElement;
     const t0 = performance.now();
@@ -280,32 +280,32 @@ export class Hud {
 
   helpModal() {
     this.modal(`
-      <div class="modal-title">HOW TO PLAY</div>
+      <div class="modal-title">КАК ИГРАТЬ</div>
       <div class="help-cols">
         <div>
-          <b>BUILD</b>
-          <p>Tap to place the selected block. Drag to orbit, pinch to zoom. ✕ toggles delete. ⟳ rotates seats & thrusters. Blocks cost gold — deleting refunds them.</p>
+          <b>СТРОЙКА</b>
+          <p>Коснись, чтобы поставить блок. Веди пальцем — вращать камеру, щипок — зум. ✕ — режим удаления. ⟳ — поворот сидений и двигателей. Блоки стоят золота, при удалении оно возвращается.</p>
         </div>
         <div>
-          <b>SAIL</b>
-          <p>The current carries you. Joystick (or A/D) steers, BOOST fires thrusters (W), JUMP hops (Space). Reach THE END for treasure — every stage banks gold even if you wreck.</p>
+          <b>ЗАПЛЫВ</b>
+          <p>Течение несёт тебя вперёд. Джойстик (или A/D) рулит, БУСТ включает двигатели (W), ПРЫЖОК подскакивает (пробел). Доберись до ФИНИША за сокровищем — золото копится за каждый этап, даже если разобьёшься.</p>
         </div>
       </div>
-      <div class="modal-sub">Wood floats · metal & gold sink without hull · balloons lift · TNT is a terrible, wonderful idea.</div>
-      <button class="primary-btn" id="ok-btn">GOT IT</button>
+      <div class="modal-sub">Дерево плавает · металл и золото тонут без корпуса · шары поднимают · динамит — ужасная, чудесная идея.</div>
+      <button class="primary-btn" id="ok-btn">ПОНЯТНО</button>
     `);
     this.q('modal-layer').querySelector('#ok-btn')!.addEventListener('click', () => this.closeModal());
   }
 
   settingsModal() {
     const m = this.modal(`
-      <div class="modal-title">SETTINGS</div>
-      <div class="set-row"><span>Team color</span><div class="swatches" id="swatches"></div></div>
-      <div class="set-row"><span>Sound</span><button class="mini-btn" id="mute-btn">${this.sfx.muted ? 'OFF' : 'ON'}</button></div>
-      <div class="set-row"><span>Share boat</span><button class="mini-btn" id="share-btn">LINK</button></div>
-      <div class="set-row"><span>Clear plot</span><button class="mini-btn danger" id="clear-btn">CLEAR</button></div>
+      <div class="modal-title">НАСТРОЙКИ</div>
+      <div class="set-row"><span>Цвет команды</span><div class="swatches" id="swatches"></div></div>
+      <div class="set-row"><span>Звук</span><button class="mini-btn" id="mute-btn">${this.sfx.muted ? 'ВЫКЛ' : 'ВКЛ'}</button></div>
+      <div class="set-row"><span>Поделиться лодкой</span><button class="mini-btn" id="share-btn">ССЫЛКА</button></div>
+      <div class="set-row"><span>Очистить участок</span><button class="mini-btn danger" id="clear-btn">ОЧИСТИТЬ</button></div>
       <div id="mp-slot"></div>
-      <button class="primary-btn" id="ok-btn">DONE</button>
+      <button class="primary-btn" id="ok-btn">ГОТОВО</button>
     `);
     const sw = m.querySelector('#swatches')!;
     TEAM_COLORS.forEach((c, i) => {
@@ -323,7 +323,7 @@ export class Hud {
     });
     m.querySelector('#mute-btn')!.addEventListener('click', (e) => {
       this.sfx.setMuted(!this.sfx.muted);
-      (e.target as HTMLElement).textContent = this.sfx.muted ? 'OFF' : 'ON';
+      (e.target as HTMLElement).textContent = this.sfx.muted ? 'ВЫКЛ' : 'ВКЛ';
     });
     m.querySelector('#share-btn')!.addEventListener('click', () => {
       this.cb.onShareBoat();
@@ -346,9 +346,9 @@ export class Hud {
     b.innerHTML = `
       <div class="boot-glow"></div>
       <div class="boot-title">NEON<span>TIDE</span></div>
-      <div class="boot-sub">build a boat · brave the rapids · take the gold</div>
-      <button id="start-btn" disabled>LOADING…</button>
-      <div class="boot-hint">wood floats — gold does not. good luck, captain.</div>
+      <div class="boot-sub">построй лодку · пройди пороги · забери золото</div>
+      <button id="start-btn" disabled>ЗАГРУЗКА…</button>
+      <div class="boot-hint">дерево плавает — золото нет. удачи, капитан.</div>
     `;
     this.root.parentElement!.appendChild(b);
     b.querySelector('#start-btn')!.addEventListener('click', () => {
@@ -362,7 +362,7 @@ export class Hud {
     const btn = this.root.parentElement!.querySelector('#start-btn') as HTMLButtonElement | null;
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'SET SAIL ▶';
+      btn.textContent = 'ОТПЛЫТЬ ▶';
     }
   }
 }

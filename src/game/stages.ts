@@ -458,7 +458,7 @@ export class Course {
       const arc = new THREE.Mesh(new THREE.TorusGeometry(W - 0.3, 0.13, 8, 40, Math.PI), emissiveMat(tier.color, 1.5));
       arc.position.set(0, 0.2, z);
       g.add(arc);
-      const label = makeTextSprite(`STAGE ${i + 1}`, tier.css);
+      const label = makeTextSprite(`ЭТАП ${i + 1}`, tier.css);
       label.position.set(0, 7.6, z);
       g.add(label);
     }
@@ -504,7 +504,7 @@ export class Course {
         glow.position.set(sx * (W - 0.6), POOL.level + 4.4, END.gateZ);
         g.add(glow);
       }
-      const endLabel = makeTextSprite('THE END', '#ffc94d');
+      const endLabel = makeTextSprite('ФИНИШ', '#ffc94d');
       endLabel.position.set(0, POOL.level + 10.4, END.gateZ);
       g.add(endLabel);
       const bar = new THREE.Mesh(new THREE.BoxGeometry(W * 2, 0.7, 0.7), WALL_MAT);
