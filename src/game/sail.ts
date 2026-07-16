@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DMG, ECON, END, PHYS, TEAM_COLORS, Z_WF } from '../config';
-import type { Design, RunStats, XfPacket } from '../types';
+import type { BlockKind, Design, RunStats, XfPacket } from '../types';
 import { net } from '../net/net';
 import { hydro, waterLevelAt } from '../engine/water';
 import type { ContactHit } from '../engine/physics';
@@ -15,8 +15,12 @@ import type { Sfx } from '../engine/audio';
 import type { Builder } from './builder';
 import { makeAvatar } from './blocks';
 import { tg } from '../telegram';
+import { newRunId, reportRun } from '../gg';
 
 const V = new THREE.Vector3();
+
+// Из чего сложен корпус (сиденья/рули/двигатели — оснастка, не материал).
+const MATERIALS = new Set<BlockKind>(['wood', 'plastic', 'metal', 'gold']);
 
 export interface SailDeps {
   fleet: Fleet;
@@ -56,6 +60,8 @@ export class Sail {
   private remoteSteer = new Map<string, number>();
   private xfClock = 0;
   private inputClock = 0;
+  /** id текущего заплыва — ключ дедупа отчёта хабу GG. */
+  private runId = '';
 
   constructor(private d: SailDeps) {
     d.fleet.on('blockLost', (b: LiveBlock) => {
@@ -101,6 +107,7 @@ export class Sail {
     this.lastProgressT = 0;
     this.treasureStarted = false;
     this.seatIdx = 0;
+    this.runId = newRunId();
 
     this.reseat(false);
     // crew avatars ride the other seats
@@ -513,9 +520,42 @@ export class Sail {
       finished,
       reason,
     };
+    // Единственная точка конца заплыва — отсюда и рапорт хабу GG. Считаем до
+    // endRun: он гасит waterfallFlag.
+    this.reportToHub(stats, state.waterfallFlag);
     state.endRun(stats, fleet.materialsUsed);
     state.setPhase('summary');
     hud.summary(stats, state.bestStage, () => this.returnToBuild());
+  }
+
+  /** Факты заплыва → хаб. Каждый клиент рапортует только за своего игрока. */
+  private reportToHub(rs: RunStats, waterfall: boolean) {
+    const used = this.d.fleet.materialsUsed;
+    const materials = [...used].filter((k) => MATERIALS.has(k));
+    const crew = net.inRoom ? Math.max(1, net.players.length) : 1;
+
+    // Только то, что заплыв реально может о себе сказать. Флаги ставим лишь в
+    // том заплыве, где приём случился — по умолчанию их нет.
+    const stats: Record<string, number | boolean> = {};
+    if (rs.finished) {
+      stats.chest = 1;
+      if (rs.blocksLost === 0) stats.flawless = true;
+      if (materials.length > 0 && materials.every((k) => k === 'gold')) stats.gold = true;
+      if (rs.time <= ECON.timePar) stats.fast = true;
+      if (crew > 1) stats.coop = true;
+    }
+    if (waterfall) stats.waterfall = true;
+
+    reportRun({
+      idempotencyKey: this.runId,
+      finished: rs.finished,
+      players: crew,
+      humanPlayers: crew, // ботов-игроков в НЕОН-ТАЙДЕ нет: на борту только люди
+      mode: net.inRoom ? 'friends' : 'solo', // комнаты только по коду/приглашению
+      durationSec: Math.round(rs.time),
+      score: rs.goldEarned,
+      stats,
+    });
   }
 
   returnToBuild() {

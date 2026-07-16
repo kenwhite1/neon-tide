@@ -15,6 +15,7 @@ import { Controls } from './game/controls';
 import { Hud } from './ui/hud';
 import { tg } from './telegram';
 import { net } from './net/net';
+import { storeLaunchToken } from './gg';
 import { TEAM_COLORS } from './config';
 import type { BlockKind } from './types';
 
@@ -28,6 +29,10 @@ async function boot() {
   hud.showBoot(() => sfx.unlock());
 
   tg.init();
+  // Запуск из хаба GG: запоминаем токен, чтобы отчитаться в конце заплыва.
+  // 'boat_...' и коды комнат ниже токеном не являются — decodeLaunchParam
+  // вернёт null, и оба deep-link'а продолжают работать как работали.
+  storeLaunchToken(tg.startParam);
   await initPhysics();
 
   const view = new View(appEl);
