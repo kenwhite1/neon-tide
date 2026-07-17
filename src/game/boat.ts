@@ -112,7 +112,7 @@ export class Fleet extends Emitter {
     this.lostCount = 0;
     this.materialsUsed = new Set(design.map((b) => b.kind));
 
-    // split the design into connected components — free-floating build pieces
+    // split the design into connected components - free-floating build pieces
     // launch as independent bodies
     const byKey = new Map<string, PlacedBlock>();
     for (const pb of design) byKey.set(keyOf(pb.gx, pb.gy, pb.gz), pb);
@@ -411,7 +411,7 @@ export class Fleet extends Emitter {
         this.colliderMap.delete(b.colHandle);
         c.group.remove(b.group);
         c.blocks.splice(c.blocks.indexOf(b), 1);
-        // graft onto the new one (same local frame — new body copied the old pose)
+        // graft onto the new one (same local frame - new body copied the old pose)
         const def = BLOCKS[b.pb.kind];
         const col = world.createCollider(
           R.ColliderDesc.cuboid(0.48, 0.48, 0.48)

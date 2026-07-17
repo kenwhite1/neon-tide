@@ -19,7 +19,7 @@ import { newRunId, reportRun } from '../gg';
 
 const V = new THREE.Vector3();
 
-// Из чего сложен корпус (сиденья/рули/двигатели — оснастка, не материал).
+// Из чего сложен корпус (сиденья/рули/двигатели - оснастка, не материал).
 const MATERIALS = new Set<BlockKind>(['wood', 'plastic', 'metal', 'gold']);
 
 export interface SailDeps {
@@ -60,7 +60,7 @@ export class Sail {
   private remoteSteer = new Map<string, number>();
   private xfClock = 0;
   private inputClock = 0;
-  /** id текущего заплыва — ключ дедупа отчёта хабу GG. */
+  /** id текущего заплыва - ключ дедупа отчёта хабу GG. */
   private runId = '';
 
   constructor(private d: SailDeps) {
@@ -108,6 +108,7 @@ export class Sail {
     this.treasureStarted = false;
     this.seatIdx = 0;
     this.runId = newRunId();
+    state.runId = this.runId; // общий id заплыва для идемпотентных ключей ggEarn
 
     this.reseat(false);
     // crew avatars ride the other seats
@@ -364,7 +365,7 @@ export class Sail {
       hud.toast('🌊 Пережил водопад!');
     }
 
-    // guests replicate the host's verdicts — no local stage awards or endings
+    // guests replicate the host's verdicts - no local stage awards or endings
     if (this.isGuest) return;
 
     // stage progress
@@ -402,7 +403,7 @@ export class Sail {
       this.lastProgressZ = t.z;
       this.lastProgressT = this.t;
     } else if (this.t - this.lastProgressT > 18 && speed < 0.6) {
-      this.end('Застрял — нет хода', false);
+      this.end('Застрял - нет хода', false);
       return;
     }
     if (t.y < -55) {
@@ -520,7 +521,7 @@ export class Sail {
       finished,
       reason,
     };
-    // Единственная точка конца заплыва — отсюда и рапорт хабу GG. Считаем до
+    // Единственная точка конца заплыва - отсюда и рапорт хабу GG. Считаем до
     // endRun: он гасит waterfallFlag.
     this.reportToHub(stats, state.waterfallFlag);
     state.endRun(stats, fleet.materialsUsed);
@@ -535,7 +536,7 @@ export class Sail {
     const crew = net.inRoom ? Math.max(1, net.players.length) : 1;
 
     // Только то, что заплыв реально может о себе сказать. Флаги ставим лишь в
-    // том заплыве, где приём случился — по умолчанию их нет.
+    // том заплыве, где приём случился - по умолчанию их нет.
     const stats: Record<string, number | boolean> = {};
     if (rs.finished) {
       stats.chest = 1;

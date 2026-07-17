@@ -17,7 +17,7 @@ export const RIVER = {
   gateZ: -0.5,
   floorY: -2.6,
 };
-export const Z_WF = RIVER.stageLen * RIVER.stages; // 416 — waterfall lip
+export const Z_WF = RIVER.stageLen * RIVER.stages; // 416 - waterfall lip
 export const POOL = { z1: Z_WF + 54, floorY: -19, level: -16 };
 export const END = { gateZ: Z_WF + 54, z1: Z_WF + 88, chestZ: Z_WF + 76, triggerZ: Z_WF + 70 };
 
@@ -48,7 +48,7 @@ export const DMG = {
   defaultMult: 0.42,
   minImpact: 5200, // N of contact force before damage starts
   scale: 1 / 950, // damage per N above threshold
-  maxHit: 42, // no one-shot wipes — big hits chip, repeated hits kill
+  maxHit: 42, // no one-shot wipes - big hits chip, repeated hits kill
   iframes: 0.12,
   sawDps: 26,
   spikeDps: 18,
@@ -81,7 +81,7 @@ export const TEAM_COLORS = [0x66e0ff, 0x4d7bff, 0x35e06f, 0xff4d5e, 0xf3f6ff, 0x
 export const BLOCKS: Record<BlockKind, BlockDef> = {
   wood: { kind: 'wood', label: 'Дерево', cost: 3, hp: 35, density: 420, color: 0xb97a45, rough: 0.78, metal: 0.02, desc: 'Дёшево, отлично плавает, быстро ломается' },
   plastic: { kind: 'plastic', label: 'Пластик', cost: 5, hp: 55, density: 560, color: 0x3ec3ff, rough: 0.2, metal: 0.05, desc: 'Лёгкий и скользкий' },
-  metal: { kind: 'metal', label: 'Металл', cost: 10, hp: 115, density: 1650, color: 0xbac7d5, rough: 0.32, metal: 0.95, desc: 'Броня — тонет без корпуса' },
+  metal: { kind: 'metal', label: 'Металл', cost: 10, hp: 115, density: 1650, color: 0xbac7d5, rough: 0.32, metal: 0.95, desc: 'Броня - тонет без корпуса' },
   gold: { kind: 'gold', label: 'Золото', cost: 25, hp: 145, density: 2300, color: 0xffc94d, rough: 0.16, metal: 1, emissive: 0x3a2a00, emissiveIntensity: 0.25, desc: 'Тяжёлое, блестит, почти не ломается' },
   seat: { kind: 'seat', label: 'Сиденье', cost: 8, hp: 62, density: 480, color: 0x8a5cff, rough: 0.4, metal: 0.3, emissive: 0x2a1560, emissiveIntensity: 0.5, desc: 'Здесь едет твой капитан', functional: true, dir: true },
   rudder: { kind: 'rudder', label: 'Руль', cost: 10, hp: 45, density: 520, color: 0x37e6c8, rough: 0.35, metal: 0.5, emissive: 0x0b4a40, emissiveIntensity: 0.5, desc: '+ управляемость', functional: true, dir: true },
@@ -104,20 +104,20 @@ export type ObSpec =
 
 // z is local to the stage (0..52), x in [-6.5..6.5]
 export const STAGES: ObSpec[][] = [
-  // 1 GREEN — learn to steer
+  // 1 GREEN - learn to steer
   [
     { t: 'rock', x: -3, z: 16 },
     { t: 'rock', x: 2.6, z: 28, s: 1.3 },
     { t: 'rock', x: -1, z: 42 },
   ],
-  // 2 GREEN — walls with gaps
+  // 2 GREEN - walls with gaps
   [
     { t: 'wall', z: 14, gapX: -2.8, gapW: 6 },
     { t: 'rock', x: 3.2, z: 26 },
     { t: 'geyser', x: 0, z: 34 },
     { t: 'wall', z: 46, gapX: 3, gapW: 6.5 },
   ],
-  // 3 GREEN — first saw
+  // 3 GREEN - first saw
   [
     { t: 'saw', x: -4.6, z: 13 },
     { t: 'wall', z: 24, gapX: 0, gapW: 5.5 },
@@ -125,14 +125,14 @@ export const STAGES: ObSpec[][] = [
     { t: 'rock', x: -3.4, z: 40, s: 1.2 },
     { t: 'geyser', x: 2, z: 46 },
   ],
-  // 4 YELLOW — swinging axes
+  // 4 YELLOW - swinging axes
   [
     { t: 'axe', z: 13 },
     { t: 'rock', x: -4, z: 24 },
     { t: 'axe', z: 34, phase: Math.PI * 0.6 },
     { t: 'wall', z: 46, gapX: -3.4, gapW: 5 },
   ],
-  // 5 YELLOW — saw weave + geysers
+  // 5 YELLOW - saw weave + geysers
   [
     { t: 'saw', x: -5, z: 15 },
     { t: 'saw', x: 0, z: 15 },
@@ -142,14 +142,14 @@ export const STAGES: ObSpec[][] = [
     { t: 'saw', x: -2.6, z: 42 },
     { t: 'saw', x: 2.6, z: 42 },
   ],
-  // 6 YELLOW — cannons + low ceiling
+  // 6 YELLOW - cannons + low ceiling
   [
     { t: 'cannon', side: -1, z: 8 },
     { t: 'cannon', side: 1, z: 22 },
     { t: 'ceiling', z: 34, h: 2.7 },
     { t: 'rock', x: 0, z: 44, s: 1.5 },
   ],
-  // 7 RED — spikes + fast axes
+  // 7 RED - spikes + fast axes
   [
     { t: 'spikes', x0: -6.5, x1: -0.5, z0: 6, z1: 12 },
     { t: 'axe', z: 19, period: 2.0 },
@@ -157,7 +157,7 @@ export const STAGES: ObSpec[][] = [
     { t: 'axe', z: 38, period: 1.9, phase: 2 },
     { t: 'saw', x: 0, z: 47 },
   ],
-  // 8 RED — the gauntlet
+  // 8 RED - the gauntlet
   [
     { t: 'cannon', side: -1, z: 5 },
     { t: 'cannon', side: 1, z: 12 },
@@ -172,7 +172,7 @@ export const STAGES: ObSpec[][] = [
 
 export const QUESTS = [
   { id: 'stage5', label: 'Дойти до этапа 5', gold: 40 },
-  { id: 'woodrun', label: 'Пройти заплыв — только дерево и сиденье', gold: 75 },
+  { id: 'woodrun', label: 'Пройти заплыв - только дерево и сиденье', gold: 75 },
   { id: 'waterfall', label: 'Пережить водопад', gold: 50 },
 ];
 

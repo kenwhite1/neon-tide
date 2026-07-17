@@ -9,7 +9,7 @@ export function waterLevelAt(_x: number, z: number): number {
   return z < Z_WF ? WATER.level : POOL.level;
 }
 
-/** Water velocity field — the river's forward push, lip suck, pool drift. */
+/** Water velocity field - the river's forward push, lip suck, pool drift. */
 export function currentAt(_x: number, _y: number, z: number, out: THREE.Vector3): THREE.Vector3 {
   out.set(0, 0, 0);
   if (z < RIVER.gateZ) {

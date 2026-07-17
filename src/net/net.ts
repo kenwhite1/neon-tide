@@ -54,7 +54,7 @@ export class Net {
           reject(new Error(msg));
         }
       };
-      ws.onerror = () => fail('Relay unreachable — is the relay server running?');
+      ws.onerror = () => fail('Relay unreachable - is the relay server running?');
       ws.onclose = () => {
         if (!settled) fail('Connection closed');
         else {

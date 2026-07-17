@@ -2,8 +2,8 @@
 // Host-authoritative: build ops mirror to a shared design, the host streams
 // boat transforms during a run, guests stream inputs back.
 //
-//   attachRelay(httpServer, '/relay')   — share a port with the web server (prod)
-//   node server/relay.mjs               — standalone on RELAY_PORT (default 8791)
+//   attachRelay(httpServer, '/relay')   - share a port with the web server (prod)
+//   node server/relay.mjs               - standalone on RELAY_PORT (default 8791)
 
 import { WebSocketServer } from 'ws';
 

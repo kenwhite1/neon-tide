@@ -91,7 +91,7 @@ export class Hud {
     });
     this.state.on('inv', () => this.refreshPalette());
     this.state.on('quest', (q: { label: string; gold: number }) => {
-      this.toast(`✓ КВЕСТ — ${q.label} · +${q.gold} золота`);
+      this.toast(`✓ КВЕСТ - ${q.label} · +${q.gold} золота`);
       this.sfx.play('win');
     });
 
@@ -146,7 +146,7 @@ export class Hud {
   stagePopup(n: number, gold: number) {
     const tier = TIERS[tierOfStage(n - 1)];
     const b = this.q('banner');
-    b.innerHTML = `<div class="banner-stage" style="color:${tier.css}">ЭТАП ${n} — ${tier.name}</div><div class="banner-gold">+${gold} ${coin}</div>`;
+    b.innerHTML = `<div class="banner-stage" style="color:${tier.css}">ЭТАП ${n} - ${tier.name}</div><div class="banner-gold">+${gold} ${coin}</div>`;
     b.classList.remove('show');
     void b.offsetWidth;
     b.classList.add('show');
@@ -183,7 +183,7 @@ export class Hud {
         <span class="swatch" style="background:${colorHex}"></span>
         <span class="bl">${def.label}</span>
         <span class="badge">${owned > 0 ? '×' + owned : `<i class="coin s"></i>${def.cost}`}</span>`;
-      chip.title = `${def.desc} — прочность ${def.hp}${owned > 0 ? '' : ` · стоит ${def.cost} золота`}`;
+      chip.title = `${def.desc} - прочность ${def.hp}${owned > 0 ? '' : ` · стоит ${def.cost} золота`}`;
       chip.addEventListener('click', () => {
         (this as any).selectedKind = kind;
         this.deleteOn = false;
@@ -284,14 +284,14 @@ export class Hud {
       <div class="help-cols">
         <div>
           <b>СТРОЙКА</b>
-          <p>Коснись, чтобы поставить блок. Веди пальцем — вращать камеру, щипок — зум. ✕ — режим удаления. ⟳ — поворот сидений и двигателей. Блоки стоят золота, при удалении оно возвращается.</p>
+          <p>Коснись, чтобы поставить блок. Веди пальцем - вращать камеру, щипок - зум. ✕ - режим удаления. ⟳ - поворот сидений и двигателей. Блоки стоят золота, при удалении оно возвращается.</p>
         </div>
         <div>
           <b>ЗАПЛЫВ</b>
-          <p>Течение несёт тебя вперёд. Джойстик (или A/D) рулит, БУСТ включает двигатели (W), ПРЫЖОК подскакивает (пробел). Доберись до ФИНИША за сокровищем — золото копится за каждый этап, даже если разобьёшься.</p>
+          <p>Течение несёт тебя вперёд. Джойстик (или A/D) рулит, БУСТ включает двигатели (W), ПРЫЖОК подскакивает (пробел). Доберись до ФИНИША за сокровищем - золото копится за каждый этап, даже если разобьёшься.</p>
         </div>
       </div>
-      <div class="modal-sub">Дерево плавает · металл и золото тонут без корпуса · шары поднимают · динамит — ужасная, чудесная идея.</div>
+      <div class="modal-sub">Дерево плавает · металл и золото тонут без корпуса · шары поднимают · динамит - ужасная, чудесная идея.</div>
       <button class="primary-btn" id="ok-btn">ПОНЯТНО</button>
     `);
     this.q('modal-layer').querySelector('#ok-btn')!.addEventListener('click', () => this.closeModal());
@@ -340,7 +340,7 @@ export class Hud {
 
   // ---------------- boot ----------------
   showBoot(onStart: () => void) {
-    // lives in the ui root, not #hud — mount() rebuilds #hud's innerHTML later
+    // lives in the ui root, not #hud - mount() rebuilds #hud's innerHTML later
     const b = document.createElement('div');
     b.id = 'boot';
     b.innerHTML = `
@@ -348,7 +348,7 @@ export class Hud {
       <div class="boot-title">NEON<span>TIDE</span></div>
       <div class="boot-sub">построй лодку · пройди пороги · забери золото</div>
       <button id="start-btn" disabled>ЗАГРУЗКА…</button>
-      <div class="boot-hint">дерево плавает — золото нет. удачи, капитан.</div>
+      <div class="boot-hint">дерево плавает - золото нет. удачи, капитан.</div>
     `;
     this.root.parentElement!.appendChild(b);
     b.querySelector('#start-btn')!.addEventListener('click', () => {

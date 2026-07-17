@@ -129,7 +129,7 @@ class Saw implements Obstacle {
     }
     this.disc.add(blade, rim, hub);
     // stand under the disc so the blade reads as slicing the river
-    this.disc.rotation.z = Math.PI / 2; // disc plane YZ — thin from the side
+    this.disc.rotation.z = Math.PI / 2; // disc plane YZ - thin from the side
     parent.add(this.disc);
 
     this.body = world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setTranslation(x, 0.15, z));

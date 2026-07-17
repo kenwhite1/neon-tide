@@ -1,5 +1,6 @@
 import { BLOCKS, ECON, QUESTS, SAVE_KEY } from '../config';
 import { Emitter, type BlockKind, type Design, type Phase, type RunStats } from '../types';
+import { hubWalletEnabled, hubBalance, hubSpend, hubEarn } from '../gg';
 
 const DEFAULT_DESIGN: Design = (() => {
   const d: Design = [];
@@ -22,9 +23,48 @@ export class GameState extends Emitter {
   teamColor = 0;
   runGold = 0;
 
+  // Запуск из хаба: баланс золота - это счёт G хаба (источник истины). Локальный
+  // баланс из localStorage остаётся как временный fallback, если хаб недоступен.
+  hub = false;
+  // Стабильный id заплыва (ставит Sail при старте) + счётчик событий заработка -
+  // вместе дают идемпотентный ключ `boat:<runId>:<n>` на каждое начисление G.
+  runId = 'session';
+  private spendSeq = 0;
+  private earnSeq = 0;
+
   constructor() {
     super();
+    this.hub = hubWalletEnabled();
     this.load();
+    if (this.hub) void this.syncHubBalance();
+  }
+
+  /** Подтянуть настоящий баланс G из хаба и обновить HUD. */
+  async syncHubBalance() {
+    const bal = await hubBalance();
+    if (bal == null) return; // хаб недоступен - живём на локальном балансе
+    this.gold = bal;
+    this.emit('gold', 0, 'hub-sync');
+  }
+
+  /** Списать G у хаба (идемпотентно) и сверить локальный баланс с ответом. */
+  private pushHubSpend(amount: number, reason: string) {
+    const key = `neontide-spend-${Date.now()}-${this.spendSeq++}`;
+    void hubSpend(amount, reason, key, key).then((bal) => {
+      if (bal == null) return; // хаб не ответил - остаёмся на оптимистичном балансе
+      this.gold = bal;
+      this.emit('gold', 0, 'hub-sync');
+    });
+  }
+
+  /** Начислить G у хаба за игровое событие (идемпотентно) и сверить баланс. */
+  private pushHubEarn(amount: number, reason: string) {
+    const key = `boat:${this.runId}:${this.earnSeq++}`;
+    void hubEarn(amount, reason, key, key).then((bal) => {
+      if (bal == null) return; // хаб не ответил - остаёмся на оптимистичном балансе
+      this.gold = bal;
+      this.emit('gold', 0, 'hub-sync');
+    });
   }
 
   load() {
@@ -74,16 +114,22 @@ export class GameState extends Emitter {
 
   award(n: number, reason?: string) {
     if (n <= 0) return;
+    // Оптимистично показываем +n сразу, а хабу шлём идемпотентный ggEarn и
+    // сверяем баланс по ответу (хаб может урезать по дневному потолку).
     this.gold += n;
     this.emit('gold', n, reason);
     this.save();
+    if (this.hub) this.pushHubEarn(n, reason ?? 'run');
   }
 
   spend(n: number): boolean {
     if (this.gold < n) return false;
+    // Оптимистично списываем локально (покупка блоков синхронна), а хабу шлём
+    // идемпотентный ggSpend и сверяем баланс по ответу.
     this.gold -= n;
     this.emit('gold', -n);
     this.save();
+    if (this.hub && n > 0) this.pushHubSpend(n, 'buy-block');
     return true;
   }
 
@@ -138,6 +184,7 @@ export class GameState extends Emitter {
     this.emit('gold', q.gold, 'quest');
     this.emit('quest', q);
     this.save();
+    if (this.hub) this.pushHubEarn(q.gold, `quest:${id}`);
   }
 
   endRun(stats: RunStats, used: Set<BlockKind>) {
@@ -148,5 +195,7 @@ export class GameState extends Emitter {
     if (stats.finished && [...used].every((k) => k === 'wood' || k === 'seat')) this.questCheck('woodrun');
     this.waterfallFlag = false;
     this.save();
+    // Награда за заплыв начисляется хабом по ggReport - подтянем настоящий баланс.
+    if (this.hub) void this.syncHubBalance();
   }
 }

@@ -41,7 +41,7 @@ const MIME = {
 };
 
 const hasDist = fs.existsSync(path.join(DIST, 'index.html'));
-if (!hasDist) console.warn('[web] dist/ not built yet — run `npm run build`. Serving API only.');
+if (!hasDist) console.warn('[web] dist/ not built yet - run `npm run build`. Serving API only.');
 
 function readBody(req) {
   return new Promise((resolve) => {

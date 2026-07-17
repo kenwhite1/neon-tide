@@ -1,4 +1,4 @@
-// Tiny WebAudio synth — no assets, arcade-flavored blips and booms.
+// Tiny WebAudio synth - no assets, arcade-flavored blips and booms.
 
 type SoundName =
   | 'tap' | 'place' | 'remove' | 'coin' | 'stage' | 'crack' | 'break' | 'explosion'

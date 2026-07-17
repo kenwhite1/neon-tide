@@ -393,7 +393,7 @@ export class Builder {
   canLaunch(minSeats = 1): { ok: boolean; reason: string } {
     if (this.grid.size === 0) return { ok: false, reason: 'Place some blocks first!' };
     const seats = this.seatCount();
-    if (seats < minSeats) return { ok: false, reason: minSeats > 1 ? `Need ${minSeats} seats — one per player` : 'Your captain needs a Seat!' };
+    if (seats < minSeats) return { ok: false, reason: minSeats > 1 ? `Need ${minSeats} seats - one per player` : 'Your captain needs a Seat!' };
     return { ok: true, reason: '' };
   }
 

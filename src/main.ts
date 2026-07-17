@@ -24,15 +24,17 @@ async function boot() {
   const uiEl = document.getElementById('ui')!;
 
   const sfx = new Sfx();
+
+  tg.init();
+  // Запуск из хаба GG: запоминаем токен ДО создания GameState - баланс золота
+  // тогда берётся из кошелька G хаба. 'boat_...' и коды комнат токеном не
+  // являются - decodeLaunchParam вернёт null, и оба deep-link'а работают как были.
+  storeLaunchToken(tg.startParam);
+
   const state = new GameState();
   const hud = new Hud(uiEl, state, sfx);
   hud.showBoot(() => sfx.unlock());
 
-  tg.init();
-  // Запуск из хаба GG: запоминаем токен, чтобы отчитаться в конце заплыва.
-  // 'boat_...' и коды комнат ниже токеном не являются — decodeLaunchParam
-  // вернёт null, и оба deep-link'а продолжают работать как работали.
-  storeLaunchToken(tg.startParam);
   await initPhysics();
 
   const view = new View(appEl);
@@ -55,7 +57,7 @@ async function boot() {
     onLaunch: () => {
       if (state.phase !== 'build') return;
       if (net.inRoom && !net.isHost) {
-        hud.toast('Запускать может только хост — попроси его!');
+        hud.toast('Запускать может только хост - попроси его!');
         sfx.play('deny');
         return;
       }
@@ -74,18 +76,18 @@ async function boot() {
     onUndo: () => builder.undo(),
     onClear: () => {
       builder.clearAll(true);
-      hud.toast('Участок очищен — блоки возвращены');
+      hud.toast('Участок очищен - блоки возвращены');
     },
     onColor: (i) => builder.setAccent(TEAM_COLORS[i]),
     onShareBoat: () => {
-      tg.share(`boat_${builder.shareCode()}`, '⚓ Моя лодка в NEON TIDE — загрузи и побей мой заплыв!');
+      tg.share(`boat_${builder.shareCode()}`, '⚓ Моя лодка в NEON TIDE - загрузи и побей мой заплыв!');
       hud.toast(tg.isReal ? 'Окно «Поделиться» открыто' : 'Ссылка скопирована в буфер');
     },
   });
   (hud as any).selectedKind = 'wood';
   hud.refreshPalette();
 
-  // audio unlock safety net — any first gesture counts
+  // audio unlock safety net - any first gesture counts
   view.renderer.domElement.addEventListener('pointerdown', () => sfx.unlock(), { once: true });
 
   builder.onDeny = (msg) => hud.toast(msg);
@@ -97,7 +99,7 @@ async function boot() {
     const d = Builder.decodeShare(tg.startParam.slice(5));
     if (d) {
       const res = builder.importShared(d);
-      hud.toast(`Лодка загружена — ${res.placed} блоков${res.skipped ? `, ${res.skipped} пропущено (не хватило золота)` : ''}`);
+      hud.toast(`Лодка загружена - ${res.placed} блоков${res.skipped ? `, ${res.skipped} пропущено (не хватило золота)` : ''}`);
     }
   }
 
@@ -111,7 +113,7 @@ async function boot() {
   net.onJoined = (design) => {
     if (design.length) builder.loadDesign(design);
     else if (net.isHost) net.sendDesign(builder.design());
-    hud.toast(`⚓ Комната ${net.room} — ты ${net.isHost ? 'ХОСТ' : 'в команде'}`);
+    hud.toast(`⚓ Комната ${net.room} - ты ${net.isHost ? 'ХОСТ' : 'в команде'}`);
   };
   net.onPlayers = () => {
     if (net.inRoom) hud.toast(`Команда: ${net.players.map((p) => p.name).join(', ')}`);
@@ -127,7 +129,7 @@ async function boot() {
     else if (ev.k === 'treasure') sail.guestTreasure(ev.gold);
   };
   net.onError = (m) => hud.toast(`⚠️ ${m}`);
-  net.onLeft = () => hud.toast('Вышел из комнаты — снова соло');
+  net.onLeft = () => hud.toast('Вышел из комнаты - снова соло');
 
   const renderMp = (slot: HTMLElement) => {
     if (!net.inRoom) {
@@ -220,7 +222,7 @@ async function boot() {
   }
   requestAnimationFrame(frame);
 
-  // hidden tabs get no rAF (and timers clamp to 1Hz) — keep simulating at
+  // hidden tabs get no rAF (and timers clamp to 1Hz) - keep simulating at
   // real speed via physics catch-up so a multiplayer host that backgrounds
   // the app briefly doesn't freeze or slow the whole crew
   window.setInterval(() => {

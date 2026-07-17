@@ -22,15 +22,15 @@ async function call(token, method, body) {
 
 /**
  * Registers the bot's menu button, commands and webhook against APP_URL.
- * Safe to call on every boot — Telegram treats these as idempotent upserts.
+ * Safe to call on every boot - Telegram treats these as idempotent upserts.
  */
 export async function setupBot({ token, appUrl, secret, botUsername }) {
   if (!token) {
-    console.warn('[bot] BOT_TOKEN not set — running in DEV MODE (no Telegram wiring).');
+    console.warn('[bot] BOT_TOKEN not set - running in DEV MODE (no Telegram wiring).');
     return;
   }
   if (!appUrl) {
-    console.warn('[bot] APP_URL not set — skipping webhook/menu setup.');
+    console.warn('[bot] APP_URL not set - skipping webhook/menu setup.');
     return;
   }
   const url = appUrl.replace(/\/$/, '');
@@ -48,7 +48,7 @@ export async function setupBot({ token, appUrl, secret, botUsername }) {
   });
 
   await call(token, 'setMyDescription', {
-    description: 'NEON TIDE — строй лодку из блоков, гони по неоновой реке сквозь ловушки и забирай золото из сундука. Играй соло или с друзьями.',
+    description: 'NEON TIDE - строй лодку из блоков, гони по неоновой реке сквозь ловушки и забирай золото из сундука. Играй соло или с друзьями.',
   });
   await call(token, 'setMyShortDescription', {
     short_description: 'Строй лодку, пройди реку ловушек, забери сокровище.',
@@ -75,7 +75,7 @@ export async function handleUpdate({ token, appUrl, update }) {
   await call(token, 'sendMessage', {
     chat_id: msg.chat.id,
     text:
-      '🚤 *NEON TIDE*\n\nСтрой лодку из блоков, отправляй её по неоновой реке сквозь пилы, пушки и водопад — и забирай золото из сундука в конце.\n\nЖми кнопку, чтобы отплыть 👇',
+      '🚤 *NEON TIDE*\n\nСтрой лодку из блоков, отправляй её по неоновой реке сквозь пилы, пушки и водопад - и забирай золото из сундука в конце.\n\nЖми кнопку, чтобы отплыть 👇',
     parse_mode: 'Markdown',
     reply_markup: url
       ? { inline_keyboard: [[{ text: '⚓ Играть', web_app: { url } }]] }

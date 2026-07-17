@@ -171,7 +171,7 @@ button { font-family: inherit; border: none; cursor: pointer; touch-action: mani
 #launch-btn:active { transform: scale(0.96); }
 
 /* ---------------- sail controls ---------------- */
-/* touch-action:none on every interactive control is critical on mobile —
+/* touch-action:none on every interactive control is critical on mobile -
    without it the webview claims drags as scroll gestures and fires
    pointercancel, which kills the joystick mid-steer. */
 #sail-controls { position: absolute; inset: 0; pointer-events: none; touch-action: none; }
