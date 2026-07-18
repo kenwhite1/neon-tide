@@ -80,7 +80,7 @@ async function boot() {
     },
     onColor: (i) => builder.setAccent(TEAM_COLORS[i]),
     onShareBoat: () => {
-      tg.share(`boat_${builder.shareCode()}`, '⚓ Моя лодка в NEON TIDE - загрузи и побей мой заплыв!');
+      tg.share(`boat_${builder.shareCode()}`, '⚓ Моя лодка в Кораблике - загрузи и побей мой заплыв!');
       hud.toast(tg.isReal ? 'Окно «Поделиться» открыто' : 'Ссылка скопирована в буфер');
     },
   });
@@ -160,7 +160,7 @@ async function boot() {
         <span style="display:flex;gap:6px"><button class="mini-btn" id="mp-invite">ПРИГЛАСИТЬ</button><button class="mini-btn danger" id="mp-leave">ВЫЙТИ</button></span></div>
         <div style="font-size:12px;opacity:.7;font-weight:600;padding:4px 2px">${net.players.map((p) => p.name).join(' · ')}</div>`;
       slot.querySelector('#mp-invite')!.addEventListener('click', () => {
-        tg.share(net.room, `⚓ Заходи в мою команду NEON TIDE! Код комнаты: ${net.room}`);
+        tg.share(net.room, `⚓ Заходи в мою команду в Кораблике! Код комнаты: ${net.room}`);
         hud.toast(tg.isReal ? 'Окно приглашения открыто' : 'Ссылка-приглашение скопирована');
       });
       slot.querySelector('#mp-leave')!.addEventListener('click', () => {

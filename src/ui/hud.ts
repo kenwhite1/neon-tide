@@ -345,7 +345,7 @@ export class Hud {
     b.id = 'boot';
     b.innerHTML = `
       <div class="boot-glow"></div>
-      <div class="boot-title">NEON<span>TIDE</span></div>
+      <div class="boot-title">КОРАБ<span>ЛИК</span></div>
       <div class="boot-sub">построй лодку · пройди пороги · забери золото</div>
       <button id="start-btn" disabled>ЗАГРУЗКА…</button>
       <div class="boot-hint">дерево плавает - золото нет. удачи, капитан.</div>

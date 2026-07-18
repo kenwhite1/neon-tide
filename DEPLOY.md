@@ -1,4 +1,4 @@
-# NEON TIDE — deployment status & notes
+# Кораблик — deployment status & notes
 
 **Bot:** [@lodkabuildbot](https://t.me/lodkabuildbot) ("лодка строитель")
 **Live game (canonical, with multiplayer):** https://neon-tide-production.up.railway.app
@@ -16,7 +16,7 @@ https://game-is-game-production.up.railway.app
 | Boat game (solo + multiplayer) | ✅ live | Railway `neon-tide` (kenwhite1's Projects) |
 | Multiplayer relay | ✅ live | `wss://neon-tide-production.up.railway.app/relay` |
 | Telegram bot (menu button, webhook, commands) | ✅ wired to Railway | auto-configured by the server on boot |
-| Hub tile "Неон-Тайд" | ✅ deployed | flagship arcade tile in the Game is Game hub |
+| Hub tile "Кораблик" | ✅ deployed | flagship arcade tile in the Game is Game hub |
 | Static mirror | ✅ live | GitHub Pages (solo fallback, no relay) |
 
 Verified in production: `/api/health` → `{"ok":true}`, relay creates rooms,

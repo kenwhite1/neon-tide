@@ -551,7 +551,7 @@ export class Sail {
       idempotencyKey: this.runId,
       finished: rs.finished,
       players: crew,
-      humanPlayers: crew, // ботов-игроков в НЕОН-ТАЙДЕ нет: на борту только люди
+      humanPlayers: crew, // ботов-игроков в Кораблике нет: на борту только люди
       mode: net.inRoom ? 'friends' : 'solo', // комнаты только по коду/приглашению
       durationSec: Math.round(rs.time),
       score: rs.goldEarned,

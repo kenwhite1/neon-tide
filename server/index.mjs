@@ -1,4 +1,4 @@
-// Unified production server for NEON TIDE:
+// Unified production server for «Кораблик»:
 //   • serves the built SPA (dist/)
 //   • hosts the multiplayer relay on the same port at /relay
 //   • runs the Telegram bot (menu button + webhook)
@@ -100,7 +100,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (!hasDist) {
-    res.writeHead(200, { 'content-type': 'text/plain' }).end('NEON TIDE server up. Build the app with `npm run build`.');
+    res.writeHead(200, { 'content-type': 'text/plain' }).end('Кораблик server up. Build the app with `npm run build`.');
     return;
   }
   serveStatic(req, res, urlPath);
@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
 attachRelay(server, '/relay');
 
 server.listen(PORT, () => {
-  console.log(`[web] NEON TIDE listening on :${PORT}  (dist=${hasDist})`);
+  console.log(`[web] Кораблик listening on :${PORT}  (dist=${hasDist})`);
   console.log(`[web] APP_URL=${APP_URL || '(unset)'}`);
   setupBot({ token: BOT_TOKEN, appUrl: APP_URL, secret: WEBHOOK_SECRET, botUsername: BOT_USERNAME });
 });

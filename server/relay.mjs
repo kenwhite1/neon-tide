@@ -1,4 +1,4 @@
-// WebSocket room relay for NEON TIDE multiplayer.
+// WebSocket room relay for «Кораблик» multiplayer.
 // Host-authoritative: build ops mirror to a shared design, the host streams
 // boat transforms during a run, guests stream inputs back.
 //
@@ -123,7 +123,7 @@ function wireRelay(wss, label) {
   }, 25000);
   wss.on('close', () => clearInterval(reaper));
 
-  console.log(`[relay] NEON TIDE relay ready (${label})`);
+  console.log(`[relay] Кораблик relay ready (${label})`);
   return { rooms };
 }
 

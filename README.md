@@ -1,4 +1,4 @@
-# NEON TIDE — build a boat for treasure ⚓
+# Кораблик — build a boat for treasure ⚓
 
 A 3D "Build a Boat for Treasure"-style arcade game for **Telegram Mini Apps**, built with
 **Three.js + Rapier physics**. Build a boat out of blocks on a neon dock, launch it down a
