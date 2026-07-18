@@ -69,9 +69,9 @@ export const ECON = {
 };
 
 export const TIERS = [
-  { name: 'ЛЁГКИЙ', color: 0x35e06f, css: '#35e06f' },
-  { name: 'СРЕДНИЙ', color: 0xffd23f, css: '#ffd23f' },
-  { name: 'СЛОЖНЫЙ', color: 0xff4d5e, css: '#ff4d5e' },
+  { name: 'ЛЁГКИЙ', color: 0x7fb069, css: '#7fb069' },
+  { name: 'СРЕДНИЙ', color: 0xf2a93b, css: '#f2a93b' },
+  { name: 'СЛОЖНЫЙ', color: 0xe2574c, css: '#e2574c' },
 ];
 export const tierOfStage = (i: number) => (i < 3 ? 0 : i < 6 ? 1 : 2);
 

@@ -18,19 +18,19 @@ varying vec3 vDir;
 float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453); }
 void main() {
   float h = vDir.y;
-  vec3 top = vec3(0.020, 0.030, 0.075);
-  vec3 mid = vec3(0.028, 0.10, 0.16);
-  vec3 bot = vec3(0.012, 0.018, 0.038);
+  vec3 top = vec3(0.052, 0.034, 0.020);
+  vec3 mid = vec3(0.150, 0.092, 0.040);
+  vec3 bot = vec3(0.030, 0.020, 0.012);
   vec3 col = mix(bot, mid, smoothstep(-0.25, 0.02, h));
   col = mix(col, top, smoothstep(0.03, 0.55, h));
-  // teal horizon glow line
-  col += vec3(0.05, 0.35, 0.42) * pow(max(0.0, 1.0 - abs(h - 0.015) * 9.0), 3.0) * 0.55;
+  // warm candlelight horizon glow line
+  col += vec3(0.46, 0.30, 0.10) * pow(max(0.0, 1.0 - abs(h - 0.015) * 9.0), 3.0) * 0.55;
   // sparse stars
   vec3 cell = floor(vDir * 160.0);
   float s = hash(cell);
   if (s > 0.9975 && h > 0.08) {
     float tw = hash(cell + 1.0) * 0.5 + 0.5;
-    col += vec3(0.7, 0.85, 1.0) * tw * 0.8;
+    col += vec3(1.0, 0.90, 0.68) * tw * 0.8;
   }
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -54,7 +54,7 @@ export class View {
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.id = 'game-canvas';
 
-    this.scene.fog = new THREE.FogExp2(0x05080f, 0.0072);
+    this.scene.fog = new THREE.FogExp2(0x140e08, 0.0072);
 
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 700);
     this.camera.position.set(10, 8, -20);
@@ -64,10 +64,10 @@ export class View {
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     if ('environmentIntensity' in this.scene) (this.scene as any).environmentIntensity = 0.45;
 
-    const hemi = new THREE.HemisphereLight(0x8fc4e8, 0x0a0f1c, 0.5);
+    const hemi = new THREE.HemisphereLight(0xe8c9a0, 0x1a1109, 0.5);
     this.scene.add(hemi);
 
-    this.sun = new THREE.DirectionalLight(0xeaf4ff, 2.0);
+    this.sun = new THREE.DirectionalLight(0xffeccd, 2.0);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(1024, 1024);
     const sc = this.sun.shadow.camera;

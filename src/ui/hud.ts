@@ -139,7 +139,7 @@ export class Hud {
   setHull(frac: number) {
     const bar = this.q('hull-bar');
     bar.style.width = `${Math.max(0, frac * 100)}%`;
-    bar.style.background = frac > 0.55 ? 'linear-gradient(90deg,#35e06f,#66e0ff)' : frac > 0.3 ? '#ffd23f' : '#ff4d5e';
+    bar.style.background = frac > 0.55 ? 'linear-gradient(90deg,#93c178,#7fb069 60%,#5e8e4a)' : frac > 0.3 ? '#f2a93b' : '#e2574c';
   }
 
   // ---------------- popups ----------------
