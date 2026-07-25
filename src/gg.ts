@@ -8,6 +8,10 @@
 import { ggReport, ggBalance, ggSpend, ggEarn, decodeLaunchParam, type MatchMode } from './shared/gg';
 import { tg } from './telegram';
 
+// Язык хаба едет в том же токене запуска (§i18n) - отдаём его наружу отсюда,
+// чтобы у игры была одна дверь к хабу.
+export { launchLang } from './shared/gg';
+
 // GG_HUB_URL прокинут в бандл через envPrefix в vite.config.ts (сервера со
 // своим окружением у игры нет - читать переменную в рантайме неоткуда).
 const HUB_URL = ((import.meta as any).env?.GG_HUB_URL ?? 'https://game-is-game-hub-production.up.railway.app').replace(/\/$/, '');

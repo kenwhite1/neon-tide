@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { t as tr } from '../i18n';
 import { DMG, ECON, END, PHYS, TEAM_COLORS, Z_WF } from '../config';
 import type { BlockKind, Design, RunStats, XfPacket } from '../types';
 import { net } from '../net/net';
@@ -69,7 +70,7 @@ export class Sail {
       this.d.hud.setHull(this.hullFrac());
     });
     d.fleet.on('primarySwitch', () => {
-      this.d.hud.toast('Лодка раскололась! Летим за сиденьем');
+      this.d.hud.toast(tr('Лодка раскололась! Летим за сиденьем'));
       this.d.cameraRig.shake(0.4);
     });
     d.controls.onBoost = () => this.fireBoost();
@@ -144,7 +145,7 @@ export class Sail {
     this.avatar.position.set(0, 0.2, 0.1);
     this.avatarSeat = seat.b;
     if (hopped) {
-      this.d.hud.toast('Перепрыгнул на другое сиденье!');
+      this.d.hud.toast(tr('Перепрыгнул на другое сиденье!'));
       this.d.sfx.play('jump');
     }
   }
@@ -167,7 +168,7 @@ export class Sail {
       if (this.launchT >= 3) {
         this.sailing = true;
         hydro.sailing = true;
-        this.d.hud.countdown('ВПЕРЁД!');
+        this.d.hud.countdown(tr('ВПЕРЁД!'));
         this.d.state.setPhase('sailing');
       }
     }
@@ -187,14 +188,19 @@ export class Sail {
       steer = Math.max(-1, Math.min(1, steer));
     }
     if (Math.abs(steer) > 0.05) {
+      // The boat sails toward +Z with the camera behind it, so screen-right is
+      // world -X and a right turn is a NEGATIVE yaw about +Y. steer is +1 for
+      // "right" (D / joystick right), hence the flip: without it the boat goes
+      // left when the player steers right.
+      const yaw = -steer;
       const av = rb.angvel();
       const rudders = fleet.aliveOf('rudder').filter((r) => r.c === boat).length;
       const authority = PHYS.turnPower * (1 + rudders * PHYS.rudderBonus);
-      if (Math.abs(av.y) < PHYS.maxAngVel || Math.sign(av.y) !== Math.sign(steer)) {
-        rb.addTorque({ x: 0, y: steer * authority * mass * 0.55, z: 0 }, true);
+      if (Math.abs(av.y) < PHYS.maxAngVel || Math.sign(av.y) !== Math.sign(yaw)) {
+        rb.addTorque({ x: 0, y: yaw * authority * mass * 0.55, z: 0 }, true);
       }
       // carve: a bit of lateral force so steering feels responsive even at low speed
-      rb.addForce({ x: steer * mass * 2.2, y: 0, z: 0 }, true);
+      rb.addForce({ x: -steer * mass * 2.2, y: 0, z: 0 }, true);
     }
 
     // thrusters
@@ -248,7 +254,7 @@ export class Sail {
     if (!boat) return;
     const thrusters = this.d.fleet.aliveOf('thruster').filter((t) => t.c === boat);
     if (!thrusters.length) {
-      this.d.hud.toast('Нет двигателей на борту');
+      this.d.hud.toast(tr('Нет двигателей на борту'));
       this.d.sfx.play('deny');
       return;
     }
@@ -284,7 +290,7 @@ export class Sail {
   }
 
   private abort() {
-    if (this.active && !this.treasureStarted) this.end('Возврат в порт', false);
+    if (this.active && !this.treasureStarted) this.end(tr('Возврат в порт'), false);
   }
 
   /** Per render-frame logic (stages, hazard states, end conditions, FX). */
@@ -362,7 +368,7 @@ export class Sail {
     // waterfall survival flag
     if (t.z > Z_WF + 8 && t.y < -6 && !state.waterfallFlag) {
       state.waterfallFlag = true;
-      hud.toast('🌊 Пережил водопад!');
+      hud.toast(tr('🌊 Пережил водопад!'));
     }
 
     // guests replicate the host's verdicts - no local stage awards or endings
@@ -384,7 +390,7 @@ export class Sail {
 
     // end conditions ------------------------------------------------
     if (!fleet.firstAliveSeat()) {
-      this.end('Сиденье уничтожено', false);
+      this.end(tr('Сиденье уничтожено'), false);
       return;
     }
     if (this.avatarSeat) {
@@ -394,7 +400,7 @@ export class Sail {
       if (V.y < lvl - 1.1) {
         this.drownT += dt;
         if (this.drownT > 1.25) {
-          this.end('Капитан ушёл под воду', false);
+          this.end(tr('Капитан ушёл под воду'), false);
           return;
         }
       } else this.drownT = Math.max(0, this.drownT - dt * 2);
@@ -403,11 +409,11 @@ export class Sail {
       this.lastProgressZ = t.z;
       this.lastProgressT = this.t;
     } else if (this.t - this.lastProgressT > 18 && speed < 0.6) {
-      this.end('Застрял - нет хода', false);
+      this.end(tr('Застрял - нет хода'), false);
       return;
     }
     if (t.y < -55) {
-      this.end('Пропал в пучине', false);
+      this.end(tr('Пропал в пучине'), false);
       return;
     }
 
@@ -439,7 +445,7 @@ export class Sail {
       hud.treasure(payout, () => {
         state.award(payout);
         this.goldEarned += payout;
-        this.end('Сокровище забрано!', true);
+        this.end(tr('Сокровище забрано!'), true);
       });
       this.d.particles.confetti(course.chest.position.clone().add(new THREE.Vector3(0, 2, 0)));
     }, 1500);
@@ -492,7 +498,7 @@ export class Sail {
       this.d.hud.treasure(gold, () => {
         this.d.state.award(gold);
         this.goldEarned += gold;
-        this.end('Сокровище забрано!', true);
+        this.end(tr('Сокровище забрано!'), true);
       });
       this.d.particles.confetti(this.d.course.chest.position.clone().add(new THREE.Vector3(0, 2, 0)));
     }, 1500);

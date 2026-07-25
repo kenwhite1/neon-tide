@@ -1,4 +1,5 @@
 import './ui/styles.css';
+import { lang, t } from './i18n';
 import * as THREE from 'three';
 import { FIXED_DT, initPhysics, stepWorld } from './engine/physics';
 import { View } from './engine/renderer';
@@ -16,8 +17,14 @@ import { Hud } from './ui/hud';
 import { tg } from './telegram';
 import { net } from './net/net';
 import { storeLaunchToken } from './gg';
+import { mountHubInvite } from './hubinvite';
 import { TEAM_COLORS } from './config';
 import type { BlockKind } from './types';
+
+// Язык решён в i18n (токен запуска хаба → localStorage → Telegram);
+// синхронизируем документ, чтобы он совпадал с интерфейсом.
+document.documentElement.lang = lang;
+document.title = t('Кораблик - построй лодку за сокровищем');
 
 async function boot() {
   const appEl = document.getElementById('app')!;
@@ -57,7 +64,7 @@ async function boot() {
     onLaunch: () => {
       if (state.phase !== 'build') return;
       if (net.inRoom && !net.isHost) {
-        hud.toast('Запускать может только хост - попроси его!');
+        hud.toast(t('Запускать может только хост - попроси его!'));
         sfx.play('deny');
         return;
       }
@@ -76,12 +83,12 @@ async function boot() {
     onUndo: () => builder.undo(),
     onClear: () => {
       builder.clearAll(true);
-      hud.toast('Участок очищен - блоки возвращены');
+      hud.toast(t('Участок очищен - блоки возвращены'));
     },
     onColor: (i) => builder.setAccent(TEAM_COLORS[i]),
     onShareBoat: () => {
-      tg.share(`boat_${builder.shareCode()}`, '⚓ Моя лодка в Кораблике - загрузи и побей мой заплыв!');
-      hud.toast(tg.isReal ? 'Окно «Поделиться» открыто' : 'Ссылка скопирована в буфер');
+      tg.share(`boat_${builder.shareCode()}`, t('⚓ Моя лодка в Кораблике - загрузи и побей мой заплыв!'));
+      hud.toast(tg.isReal ? t('Окно «Поделиться» открыто') : t('Ссылка скопирована в буфер'));
     },
   });
   (hud as any).selectedKind = 'wood';
@@ -99,7 +106,7 @@ async function boot() {
     const d = Builder.decodeShare(tg.startParam.slice(5));
     if (d) {
       const res = builder.importShared(d);
-      hud.toast(`Лодка загружена - ${res.placed} блоков${res.skipped ? `, ${res.skipped} пропущено (не хватило золота)` : ''}`);
+      hud.toast(`${t('Лодка загружена')} - ${res.placed} ${t('блоков')}${res.skipped ? `, ${res.skipped} ${t('пропущено (не хватило золота)')}` : ''}`);
     }
   }
 
@@ -113,10 +120,10 @@ async function boot() {
   net.onJoined = (design) => {
     if (design.length) builder.loadDesign(design);
     else if (net.isHost) net.sendDesign(builder.design());
-    hud.toast(`⚓ Комната ${net.room} - ты ${net.isHost ? 'ХОСТ' : 'в команде'}`);
+    hud.toast(`⚓ ${t('Комната')} ${net.room} - ${net.isHost ? t('ХОСТ') : t('в команде')}`);
   };
   net.onPlayers = () => {
-    if (net.inRoom) hud.toast(`Команда: ${net.players.map((p) => p.name).join(', ')}`);
+    if (net.inRoom) hud.toast(`${t('Команда')}: ${net.players.map((p) => p.name).join(', ')}`);
   };
   net.onLaunch = () => {
     if (state.phase === 'build') sail.begin(builder.design(), true);
@@ -129,15 +136,16 @@ async function boot() {
     else if (ev.k === 'treasure') sail.guestTreasure(ev.gold);
   };
   net.onError = (m) => hud.toast(`⚠️ ${m}`);
-  net.onLeft = () => hud.toast('Вышел из комнаты - снова соло');
+  net.onLeft = () => hud.toast(t('Вышел из комнаты - снова соло'));
 
   const renderMp = (slot: HTMLElement) => {
     if (!net.inRoom) {
       slot.innerHTML = `
-        <div class="set-row"><span>Мультиплеер</span><span style="display:flex;gap:6px">
-          <button class="mini-btn" id="mp-create">СОЗДАТЬ</button>
-          <button class="mini-btn" id="mp-join">ВОЙТИ</button></span></div>
-        <div id="mp-join-row" class="hidden set-row"><input id="mp-code" maxlength="5" placeholder="КОД" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:14px;min-width:0"/><button class="mini-btn" id="mp-go">ОК</button></div>`;
+        <div class="set-row"><span>${t('Мультиплеер')}</span><span style="display:flex;gap:6px">
+          <button class="mini-btn" id="mp-create">${t('СОЗДАТЬ')}</button>
+          <button class="mini-btn" id="mp-join">${t('ВОЙТИ')}</button></span></div>
+        <div id="mp-join-row" class="hidden set-row"><input id="mp-code" maxlength="5" placeholder="${t('КОД')}" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:14px;min-width:0"/><button class="mini-btn" id="mp-go">${t('ОК')}</button></div>`;
+      void mountHubInvite(slot, { note: t('Заходи ко мне в Кораблик!'), t });
       slot.querySelector('#mp-create')!.addEventListener('click', () => {
         net.join(null)
           .then(() => renderMp(slot))
@@ -156,12 +164,12 @@ async function boot() {
       });
     } else {
       slot.innerHTML = `
-        <div class="set-row"><span>Комната <b style="color:var(--accent);letter-spacing:2px">${net.room}</b>${net.isHost ? ' 👑' : ''}</span>
-        <span style="display:flex;gap:6px"><button class="mini-btn" id="mp-invite">ПРИГЛАСИТЬ</button><button class="mini-btn danger" id="mp-leave">ВЫЙТИ</button></span></div>
+        <div class="set-row"><span>${t('Комната')} <b style="color:var(--accent);letter-spacing:2px">${net.room}</b>${net.isHost ? ' 👑' : ''}</span>
+        <span style="display:flex;gap:6px"><button class="mini-btn" id="mp-invite">${t('ПРИГЛАСИТЬ')}</button><button class="mini-btn danger" id="mp-leave">${t('ВЫЙТИ')}</button></span></div>
         <div style="font-size:12px;opacity:.7;font-weight:600;padding:4px 2px">${net.players.map((p) => p.name).join(' · ')}</div>`;
       slot.querySelector('#mp-invite')!.addEventListener('click', () => {
-        tg.share(net.room, `⚓ Заходи в мою команду в Кораблике! Код комнаты: ${net.room}`);
-        hud.toast(tg.isReal ? 'Окно приглашения открыто' : 'Ссылка-приглашение скопирована');
+        tg.share(net.room, `⚓ ${t('Заходи в мою команду в Кораблике! Код комнаты:')} ${net.room}`);
+        hud.toast(tg.isReal ? t('Окно приглашения открыто') : t('Ссылка-приглашение скопирована'));
       });
       slot.querySelector('#mp-leave')!.addEventListener('click', () => {
         net.leave();

@@ -1,6 +1,6 @@
 import { BLOCKS, ECON, QUESTS, SAVE_KEY } from '../config';
 import { Emitter, type BlockKind, type Design, type Phase, type RunStats } from '../types';
-import { hubWalletEnabled, hubBalance, hubSpend, hubEarn } from '../gg';
+import { hubWalletEnabled, hubEarn } from '../gg';
 
 const DEFAULT_DESIGN: Design = (() => {
   const d: Design = [];
@@ -23,48 +23,32 @@ export class GameState extends Emitter {
   teamColor = 0;
   runGold = 0;
 
-  // Запуск из хаба: баланс золота - это счёт G хаба (источник истины). Локальный
-  // баланс из localStorage остаётся как временный fallback, если хаб недоступен.
+  // Запуск из хаба: золото - полностью локальная валюта (localStorage), баланс
+  // G хаба на неё не влияет. Хабу уходит одностороннее нормированное зеркало
+  // заработка (см. pushHubEarn); траты остаются локальными.
   hub = false;
   // Стабильный id заплыва (ставит Sail при старте) + счётчик событий заработка -
   // вместе дают идемпотентный ключ `boat:<runId>:<n>` на каждое начисление G.
   runId = 'session';
-  private spendSeq = 0;
   private earnSeq = 0;
+
+  // Курс зеркала: 8 золота = 1 G. Этап даёт 8 золота (1 G), полный заплыв с
+  // сундуком ~150-190 (~20 G), квесты 40-100 (5-12 G); активная сессия на
+  // 15 минут - примерно 30-80 G. Ни один вызов не превышает 100 G хаба.
+  private static readonly GOLD_PER_G = 8;
 
   constructor() {
     super();
     this.hub = hubWalletEnabled();
     this.load();
-    if (this.hub) void this.syncHubBalance();
   }
 
-  /** Подтянуть настоящий баланс G из хаба и обновить HUD. */
-  async syncHubBalance() {
-    const bal = await hubBalance();
-    if (bal == null) return; // хаб недоступен - живём на локальном балансе
-    this.gold = bal;
-    this.emit('gold', 0, 'hub-sync');
-  }
-
-  /** Списать G у хаба (идемпотентно) и сверить локальный баланс с ответом. */
-  private pushHubSpend(amount: number, reason: string) {
-    const key = `neontide-spend-${Date.now()}-${this.spendSeq++}`;
-    void hubSpend(amount, reason, key, key).then((bal) => {
-      if (bal == null) return; // хаб не ответил - остаёмся на оптимистичном балансе
-      this.gold = bal;
-      this.emit('gold', 0, 'hub-sync');
-    });
-  }
-
-  /** Начислить G у хаба за игровое событие (идемпотентно) и сверить баланс. */
+  /** Одностороннее зеркало заработка в хаб: floor(золото / курс) G, fire-and-forget. */
   private pushHubEarn(amount: number, reason: string) {
+    const g = Math.floor(amount / GameState.GOLD_PER_G);
+    if (g <= 0) return; // нулевое зеркало не отправляем
     const key = `boat:${this.runId}:${this.earnSeq++}`;
-    void hubEarn(amount, reason, key, key).then((bal) => {
-      if (bal == null) return; // хаб не ответил - остаёмся на оптимистичном балансе
-      this.gold = bal;
-      this.emit('gold', 0, 'hub-sync');
-    });
+    void hubEarn(g, reason, key, key);
   }
 
   load() {
@@ -114,8 +98,7 @@ export class GameState extends Emitter {
 
   award(n: number, reason?: string) {
     if (n <= 0) return;
-    // Оптимистично показываем +n сразу, а хабу шлём идемпотентный ggEarn и
-    // сверяем баланс по ответу (хаб может урезать по дневному потолку).
+    // Золото начисляем локально сразу; хабу - нормированное зеркало G.
     this.gold += n;
     this.emit('gold', n, reason);
     this.save();
@@ -124,12 +107,10 @@ export class GameState extends Emitter {
 
   spend(n: number): boolean {
     if (this.gold < n) return false;
-    // Оптимистично списываем локально (покупка блоков синхронна), а хабу шлём
-    // идемпотентный ggSpend и сверяем баланс по ответу.
+    // Траты полностью локальные - зеркало в хаб только одностороннее (earn).
     this.gold -= n;
     this.emit('gold', -n);
     this.save();
-    if (this.hub && n > 0) this.pushHubSpend(n, 'buy-block');
     return true;
   }
 
@@ -195,7 +176,5 @@ export class GameState extends Emitter {
     if (stats.finished && [...used].every((k) => k === 'wood' || k === 'seat')) this.questCheck('woodrun');
     this.waterfallFlag = false;
     this.save();
-    // Награда за заплыв начисляется хабом по ggReport - подтянем настоящий баланс.
-    if (this.hub) void this.syncHubBalance();
   }
 }

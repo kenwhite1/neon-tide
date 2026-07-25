@@ -532,3 +532,32 @@ button { font-family: inherit; border: none; cursor: pointer; touch-action: mani
   .hull-bar::after, #banner.show, #countdown.pop, .bump, .toast, .modal, .rays,
   .boot-glow, #start-btn, .panel { animation: none !important; }
 }
+
+/* -- hub friends invite ---------------------------------------------------- */
+.hub-invite { width: 100%; max-width: 420px; margin: 10px auto 0; }
+.hub-invite-open {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 14px; border: none; cursor: pointer; font: inherit;
+  font-size: 14px; font-weight: 800; border-radius: 16px;
+  color: var(--ink, #5c4326); background: var(--card2, #f7ecd9);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 3px 0 rgba(155,132,102,.3);
+}
+.hub-invite-open:active { transform: translateY(2px); }
+.hub-invite-n { font-size: 12px; font-weight: 900; padding: 2px 8px; border-radius: 999px; background: rgba(155,132,102,.22); }
+.hub-invite-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.hub-invite-list[hidden] { display: none; }
+.hub-invite-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px;
+  background: var(--card, #fffaf0); box-shadow: inset 0 0 0 1px rgba(155,132,102,.18);
+}
+.hub-invite-av { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 -3px 6px rgba(0,0,0,.12); }
+.hub-invite-nm { flex: 1; min-width: 0; font-size: 14px; font-weight: 800; color: var(--ink, #5c4326); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hub-invite-btn, .hub-invite-all {
+  border: none; cursor: pointer; font: inherit; font-size: 13px; font-weight: 800;
+  padding: 7px 14px; border-radius: 999px; color: #fff;
+  background: linear-gradient(180deg, var(--green, #7fb069), var(--green-deep, #5e8e4a));
+  box-shadow: 0 3px 0 var(--green-deep, #5e8e4a);
+}
+.hub-invite-btn:disabled { opacity: .55; box-shadow: none; cursor: default; }
+.hub-invite-all { width: 100%; margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) { .hub-invite-open, .hub-invite-btn, .hub-invite-all { transition: none; } }

@@ -1,4 +1,5 @@
 // Mobile-first sail controls: floating joystick + boost/jump buttons, plus
+import { t } from '../i18n';
 // desktop keys (A/D or arrows steer, W boost, Space jump).
 
 export class Controls {
@@ -24,8 +25,8 @@ export class Controls {
         <div class="joy-base"><div class="joy-thumb"></div></div>
       </div>
       <div class="sail-btns">
-        <button class="btn-jump" aria-label="jump">ПРЫЖОК</button>
-        <button class="btn-boost" aria-label="boost"><i class="ring"></i><span>БУСТ</span></button>
+        <button class="btn-jump" aria-label="jump">${t('ПРЫЖОК')}</button>
+        <button class="btn-boost" aria-label="boost"><i class="ring"></i><span>${t('БУСТ')}</span></button>
       </div>`;
     uiRoot.appendChild(this.root);
     this.base = this.root.querySelector('.joy-base')!;
