@@ -15,6 +15,8 @@ import type { Particles } from '../engine/particles';
 import type { Sfx } from '../engine/audio';
 import type { Builder } from './builder';
 import { makeAvatar } from './blocks';
+import { mountAvatarRig } from '../gg/avatarRig';
+import type { GGAvatars } from '../gg/avatarRender';
 import { tg } from '../telegram';
 import { newRunId, reportRun } from '../gg';
 
@@ -53,6 +55,8 @@ export class Sail {
   private wakeClock = 0;
   private avatar: THREE.Group | null = null;
   private avatarSeat: LiveBlock | null = null;
+  /** Образ игрока из хаба GG (Avatar SDK); null - капитан остаётся своим. */
+  private hub: GGAvatars | null = null;
   private seatIdx = 0;
   private treasureStarted = false;
   private boatPos = new THREE.Vector3(0, 0, -8);
@@ -140,7 +144,10 @@ export class Sail {
       this.avatarSeat = null;
       return;
     }
-    if (!this.avatar) this.avatar = makeAvatar(TEAM_COLORS[this.d.state.teamColor], tg.user.name);
+    if (!this.avatar) {
+      this.avatar = makeAvatar(TEAM_COLORS[this.d.state.teamColor], tg.user.name);
+      void this.dressCaptain(this.avatar);
+    }
     seat.b.group.add(this.avatar);
     this.avatar.position.set(0, 0.2, 0.1);
     this.avatarSeat = seat.b;
@@ -148,6 +155,28 @@ export class Sail {
       this.d.hud.toast(tr('Перепрыгнул на другое сиденье!'));
       this.d.sfx.play('jump');
     }
+  }
+
+  /** Образ игрока приехал из хаба: капитан переодевается, даже если уже плывёт. */
+  setHubAvatar(av: GGAvatars | null) {
+    this.hub = av;
+    if (this.avatar) void this.dressCaptain(this.avatar);
+  }
+
+  /**
+   * Свой капитан - «Бубл» из хаба в купленных шмотках: стоит на подушке
+   * сиденья лицом по ходу (+Z), чуть впереди спинки. Табличка с именем
+   * остаётся. Образа нет (игра не из хаба) - капитан как был.
+   */
+  private async dressCaptain(captain: THREE.Group) {
+    const mounted = await mountAvatarRig(this.hub, captain, {
+      height: 1.0,
+      facing: '+z',
+      lift: -0.27, // капитан висит на 0.2 над блоком, подушка - на -0.07
+      onRig: (rig) => { rig.group.position.z = 0.1; },
+    });
+    if (!mounted) return;
+    for (const o of captain.children) if ((o as THREE.Mesh).isMesh) o.visible = false;
   }
 
   /** Runs each physics substep, before world.step. */

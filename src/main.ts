@@ -1,3 +1,4 @@
+import { ggAvatarBadge } from './gg/avatarBadge'
 import './ui/styles.css';
 import { lang, t } from './i18n';
 import * as THREE from 'three';
@@ -17,6 +18,7 @@ import { Hud } from './ui/hud';
 import { tg } from './telegram';
 import { net } from './net/net';
 import { storeLaunchToken } from './gg';
+import { GG_HUB_DEFAULT, ggAvatar, ggLaunchToken } from './gg/avatarRender';
 import { mountHubInvite } from './hubinvite';
 import { TEAM_COLORS } from './config';
 import type { BlockKind } from './types';
@@ -37,6 +39,8 @@ async function boot() {
   // тогда берётся из кошелька G хаба. 'boat_...' и коды комнат токеном не
   // являются - decodeLaunchParam вернёт null, и оба deep-link'а работают как были.
   storeLaunchToken(tg.startParam);
+  // Образ игрока из хаба (Avatar SDK) - грузится параллельно, запуск не ждёт.
+  const hubAvatar = ggAvatar(GG_HUB_DEFAULT, ggLaunchToken()).catch(() => null);
 
   const state = new GameState();
   const hud = new Hud(uiEl, state, sfx);
@@ -59,6 +63,8 @@ async function boot() {
     haptic: (k) => tg.haptic(k),
   });
   const sail = new Sail({ fleet, course, state, hud, controls, cameraRig, particles, sfx, builder });
+  // Приехал образ - свой капитан на сиденье становится «Бублом» игрока.
+  void hubAvatar.then((av) => sail.setHubAvatar(av));
 
   hud.mount({
     onLaunch: () => {
@@ -287,5 +293,10 @@ async function boot() {
     pos: () => fleet.primary?.body.translation(),
   };
 }
+
+// Значок аватара GG: косметика, купленная в хабе, видна и здесь (Avatar SDK).
+// «Бубл» в образе игрока стоит и в самой игре, но только в плавании -
+// значок держит образ на остальных экранах.
+void ggAvatarBadge({ size: 40, corner: 'top-left' })
 
 boot();
