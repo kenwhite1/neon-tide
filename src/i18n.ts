@@ -1,3 +1,4 @@
+import { resolveGameLanguage } from './gameLocale'
 // Синхронизация языка с хабом Game is Game (см. GG/SDK.md, §i18n):
 // 1) claim `lng` из токена запуска (start_param) - хаб знает лучше;
 // 2) сохранённый выбор (localStorage);
@@ -8,26 +9,12 @@
 // блок данных (каталоги блоков, квесты). Язык решается один раз на запуск -
 // переключателя внутри игры нет, его роль играет тумблер в хабе.
 
-import { launchLang } from './gg';
 
 export type Lang = 'ru' | 'en';
 
 const KEY = 'gg_lang';
 
-function detectLang(): Lang {
-  const hub = launchLang((window as any).Telegram?.WebApp?.initDataUnsafe?.start_param);
-  if (hub) {
-    try { localStorage.setItem(KEY, hub); } catch { /* private mode */ }
-    return hub;
-  }
-  try {
-    const s = localStorage.getItem(KEY);
-    if (s === 'ru' || s === 'en') return s;
-  } catch { /* private mode */ }
-  const code = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
-  if (code) return String(code).toLowerCase().startsWith('ru') ? 'ru' : 'en';
-  return 'ru';
-}
+function detectLang(): Lang { return resolveGameLanguage(KEY) }
 
 export const lang: Lang = detectLang();
 
