@@ -1,3 +1,4 @@
+import { authoredData } from './i18n'
 import { L } from './i18n';
 import type { BlockDef, BlockKind } from './types';
 
@@ -69,17 +70,17 @@ export const ECON = {
   timePar: 95, // seconds; slower than this decays the time bonus
 };
 
-export const TIERS = [
+export const TIERS = authoredData([
   { name: L('ЛЁГКИЙ', 'EASY'), color: 0x7fb069, css: '#7fb069' },
   { name: L('СРЕДНИЙ', 'MEDIUM'), color: 0xf2a93b, css: '#f2a93b' },
   { name: L('СЛОЖНЫЙ', 'HARD'), color: 0xe2574c, css: '#e2574c' },
-];
+]);
 export const tierOfStage = (i: number) => (i < 3 ? 0 : i < 6 ? 1 : 2);
 
 export const TEAM_COLORS = [0x66e0ff, 0x4d7bff, 0x35e06f, 0xff4d5e, 0xf3f6ff, 0xffd23f, 0xff5ce1];
 
 // ---------- block catalog ----------
-export const BLOCKS: Record<BlockKind, BlockDef> = {
+export const BLOCKS: Record<BlockKind, BlockDef> = authoredData({
   wood: { kind: 'wood', label: L('Дерево', 'Wood'), cost: 3, hp: 35, density: 420, color: 0xb97a45, rough: 0.78, metal: 0.02, desc: L('Дёшево, отлично плавает, быстро ломается', 'Cheap, floats great, breaks fast') },
   plastic: { kind: 'plastic', label: L('Пластик', 'Plastic'), cost: 5, hp: 55, density: 560, color: 0x3ec3ff, rough: 0.2, metal: 0.05, desc: L('Лёгкий и скользкий', 'Light and slippery') },
   metal: { kind: 'metal', label: L('Металл', 'Metal'), cost: 10, hp: 115, density: 1650, color: 0xbac7d5, rough: 0.32, metal: 0.95, desc: L('Броня - тонет без корпуса', 'Armour - sinks without a hull') },
@@ -89,7 +90,7 @@ export const BLOCKS: Record<BlockKind, BlockDef> = {
   thruster: { kind: 'thruster', label: L('Двигатель', 'Thruster'), cost: 30, hp: 55, density: 850, color: 0x2a3346, rough: 0.3, metal: 0.8, emissive: 0x0d3a4a, emissiveIntensity: 0.6, desc: L('Рывок скорости, есть перезарядка', 'Speed burst, has a cooldown'), functional: true, dir: true },
   balloon: { kind: 'balloon', label: L('Шар', 'Balloon'), cost: 15, hp: 14, density: 90, color: 0xff5c8a, rough: 0.35, metal: 0, emissive: 0x40101f, emissiveIntensity: 0.4, desc: L('Подъём! Легко лопается', 'Lift! Pops easily'), functional: true },
   tnt: { kind: 'tnt', label: L('Динамит', 'Dynamite'), cost: 12, hp: 30, density: 520, color: 0xff3b30, rough: 0.5, metal: 0.1, emissive: 0x4a0d08, emissiveIntensity: 0.5, desc: L('Взрывается от сильного удара', 'Detonates on a hard hit'), functional: true },
-};
+});
 export const PALETTE_ORDER: BlockKind[] = ['wood', 'plastic', 'metal', 'gold', 'seat', 'rudder', 'thruster', 'balloon', 'tnt'];
 
 // ---------- stage obstacle layouts ----------
@@ -171,10 +172,10 @@ export const STAGES: ObSpec[][] = [
   ],
 ];
 
-export const QUESTS = [
+export const QUESTS = authoredData([
   { id: 'stage5', label: L('Дойти до этапа 5', 'Reach stage 5'), gold: 40 },
   { id: 'woodrun', label: L('Пройти заплыв - только дерево и сиденье', 'Finish a run with wood and a seat only'), gold: 75 },
   { id: 'waterfall', label: L('Пережить водопад', 'Survive the waterfall'), gold: 50 },
-];
+]);
 
 export const SAVE_KEY = 'neon-tide-v1';

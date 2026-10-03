@@ -96,8 +96,8 @@ export async function mountHubInvite(
 ): Promise<HTMLElement | null> {
   const token = launchToken();
   if (!token) return null;
-  const lang = tokenLang(token);
-  const t = (ru: string) => (lang === 'en' ? PANEL_EN[ru] ?? opts.t?.(ru) ?? ru : ru);
+  const language = () => document.documentElement.lang === 'en' ? 'en' : document.documentElement.lang === 'ru' ? 'ru' : tokenLang(token);
+  const t = (ru: string) => (language() === 'en' ? PANEL_EN[ru] ?? opts.t?.(ru) ?? ru : ru);
 
   const data = await hub('/api/sdk/friends', token);
   const friends: HubFriend[] = data?.ok ? data.friends : [];
@@ -159,6 +159,13 @@ export async function mountHubInvite(
     list.appendChild(all);
   }
 
+  const repaint = () => {
+    if (!root.isConnected) { window.removeEventListener('gg:language-change', repaint); return; }
+    label.textContent = `👥 ${t('Позвать друзей из хаба')}`;
+    for (const button of list.querySelectorAll<HTMLButtonElement>('.hub-invite-btn')) button.textContent = t(button.disabled ? 'Позвали' : 'Позвать');
+    const all = list.querySelector<HTMLButtonElement>('.hub-invite-all'); if (all) all.textContent = t(all.disabled ? 'Позвали' : 'Позвать всех');
+  };
+  window.addEventListener('gg:language-change', repaint);
   root.append(openBtn, list);
   host.appendChild(root);
   return root;

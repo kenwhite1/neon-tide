@@ -1,4 +1,4 @@
-import { resolveGameLanguage } from './gameLocale'
+import { resolveGameLanguage, installGameLanguagePicker, createGameTextTranslator, translateGameElement } from './gameLocale'
 // Синхронизация языка с хабом Game is Game (см. GG/SDK.md, §i18n):
 // 1) claim `lng` из токена запуска (start_param) - хаб знает лучше;
 // 2) сохранённый выбор (localStorage);
@@ -16,11 +16,13 @@ const KEY = 'gg_lang';
 
 function detectLang(): Lang { return resolveGameLanguage(KEY) }
 
-export const lang: Lang = detectLang();
+export let lang: Lang = detectLang();
 
 /** Выбрать блок данных по языку. */
 export function L<T>(ru: T, en: T): T {
-  return lang === 'ru' ? ru : en;
+  registerPair(ru, en)
+  const selected = lang === 'ru' ? ru : en
+  return selected && typeof selected === 'object' ? authoredData(selected) : selected;
 }
 
 const EN: Record<string, string> = {
@@ -159,5 +161,47 @@ const EN: Record<string, string> = {
 
 /** Перевод короткой строки: русский текст и есть ключ. */
 export function t(ru: string): string {
-  return lang === 'ru' ? ru : (EN[ru] ?? ru);
+  return translateBlocks(translateAuthoredText(ru, lang), lang);
+}
+
+const translateAuthoredText = createGameTextTranslator(EN)
+const listeners = new Set<() => void>()
+export function onLangChange(fn: () => void): () => void { listeners.add(fn); return () => { listeners.delete(fn) } }
+export function setLang(next: Lang): void {
+  if (next === lang) return
+  lang = next
+  document.documentElement.lang = next
+  try { localStorage.setItem(KEY, next) } catch {}
+  for (const id of ['app', 'ui', 'overlay', 'hud']) { const root = document.getElementById(id); if (root) translateGameElement(root, t) }
+  document.title = t(document.title)
+  listeners.forEach(fn => fn())
+}
+installGameLanguagePicker({ get: () => lang, set: setLang, subscribe: onLangChange })
+
+// Resolve bilingual corpus text on every read, including data cached at startup.
+const blockPairs: Record<string, string> = {}
+let blockVersion = 0, compiledVersion = -1
+let blockTranslator = createGameTextTranslator({})
+function registerPair(ru: unknown, en: unknown): void {
+  if (typeof ru === 'string' && typeof en === 'string') {
+    if (blockPairs[ru] !== en) { blockPairs[ru] = en; blockVersion++ }
+  } else if (ru && en && typeof ru === 'object' && typeof en === 'object') {
+    for (const key of Object.keys(ru)) registerPair((ru as any)[key], (en as any)[key])
+  }
+}
+function translateBlocks(text: string, language: Lang): string {
+  if (compiledVersion !== blockVersion) { blockTranslator = createGameTextTranslator(blockPairs); compiledVersion = blockVersion }
+  return blockTranslator(text, language)
+}
+const authoredProxies = new WeakMap<object, object>()
+export function authoredData<T>(value: T): T {
+  if (!value || typeof value !== 'object') return value
+  const cached = authoredProxies.get(value as object); if (cached) return cached as T
+  const proxy = new Proxy(value as object, { get(target, key, receiver) {
+    const result = Reflect.get(target, key, receiver)
+    if (['id','kind','body','face','element','icon','emoji','color','css'].includes(String(key))) return result
+    return typeof result === 'string' ? t(result) : result && typeof result === 'object' ? authoredData(result) : result
+  } })
+  authoredProxies.set(value as object, proxy)
+  return proxy as T
 }

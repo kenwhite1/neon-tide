@@ -71,3 +71,123 @@ function watchLaunchChanges(): void {
     if (next && next !== initial && hubLanguage()) location.reload()
   })
 }
+
+/** One accessible control for every game; the adapter updates the running game. */
+export function installGameLanguagePicker(adapter: {
+  get: () => GameLanguage
+  set: (language: GameLanguage) => void | Promise<void>
+  subscribe?: (changed: () => void) => (() => void)
+}): void {
+  if (typeof document === 'undefined') return
+  const mount = () => {
+    if (document.getElementById('gg-game-language')) return
+    const picker = document.createElement('div')
+    picker.id = 'gg-game-language'
+    picker.setAttribute('role', 'group')
+    picker.style.cssText = 'position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));z-index:2147483000;display:flex;gap:2px;padding:3px;border:1px solid #ffffff40;border-radius:14px;background:#131923eF;box-shadow:0 2px 12px #0004;font:600 12px/1.2 system-ui;color:white;'
+    const buttons = (['en', 'ru'] as const).map(language => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = language.toUpperCase()
+      button.dataset.language = language
+      button.style.cssText = 'border:0;border-radius:10px;padding:8px 10px;min-height:32px;color:white;font:inherit;cursor:pointer;'
+      button.addEventListener('click', async () => {
+        if (adapter.get() === language) return
+        // A preview link with ?lang must follow an explicit choice too. Some
+        // games rebuild cached canvas labels by reloading the same document.
+        if (new URLSearchParams(location.search).has('lang')) {
+          const url = new URL(location.href)
+          url.searchParams.set('lang', language)
+          history.replaceState(history.state, '', url)
+        }
+        buttons.forEach(b => { b.disabled = true })
+        try { await adapter.set(language) } finally { buttons.forEach(b => { b.disabled = false }); paint() }
+      })
+      picker.append(button)
+      return button
+    })
+    let paintedLanguage: GameLanguage | undefined
+    const paint = () => {
+      const language = adapter.get()
+      document.documentElement.lang = language
+      picker.setAttribute('aria-label', language === 'ru' ? 'Язык игры' : 'Game language')
+      for (const button of buttons) {
+        const active = button.dataset.language === language
+        button.setAttribute('aria-pressed', String(active))
+        button.style.background = active ? '#596cf0' : 'transparent'
+        button.setAttribute('aria-label', button.dataset.language === 'ru' ? 'Русский' : 'English')
+      }
+      if (paintedLanguage !== language) {
+        paintedLanguage = language
+        window.dispatchEvent(new CustomEvent('gg:language-change', { detail: language }))
+      }
+    }
+    document.body.append(picker)
+    adapter.subscribe?.(paint)
+    paint()
+  }
+  if (document.body) mount()
+  else document.addEventListener('DOMContentLoaded', mount, { once: true })
+}
+
+/** Only call for authored text, never player names, chat or user content. */
+export function createGameTextTranslator(dictionary: Record<string, string>): (text: string, language: GameLanguage) => string {
+  const reverse: Record<string, string> = Object.create(null)
+  for (const [ru, en] of Object.entries(dictionary)) if (!(en in reverse)) reverse[en] = ru
+  const patterns = [dictionary, reverse].map(map => {
+    // Full paragraphs use the exact lookup above. Keeping the fragment pattern
+    // small avoids compiling a multi-megabyte regular expression for a corpus.
+    const keys = Object.keys(map).filter(key => key.length >= 3 && key.length <= 80 && !/[{}]/.test(key)).sort((a, b) => b.length - a.length)
+    return keys.length ? new RegExp('(^|[^\\p{L}\\p{N}_])(' + keys.map(key => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}_])', 'gu') : null
+  })
+  // Server-authored prose may arrive with names or scores already inserted.
+  // Match the whole template and carry those values across unchanged.
+  const templateRules = [dictionary, reverse].map(map => Object.keys(map)
+    .filter(key => /\{[\p{L}_][\p{L}\p{N}_]*\}/u.test(key))
+    .sort((a, b) => b.length - a.length)
+    .map(key => {
+      const names: string[] = []
+      let pattern = '', end = 0
+      for (const match of key.matchAll(/\{\{([\p{L}_][\p{L}\p{N}_]*)\}\}|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu)) {
+        pattern += key.slice(end, match.index).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(.+?)'
+        names.push(match[1] ?? match[2]); end = match.index! + match[0].length
+      }
+      pattern += key.slice(end).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return { pattern: new RegExp('^' + pattern + '$', 'u'), prefix: key.slice(0, key.indexOf('{')), names, target: map[key] }
+    }))
+  return (text, language) => {
+    const map = language === 'en' ? dictionary : reverse
+    if (Object.prototype.hasOwnProperty.call(map, text)) return map[text]
+    const trimmed = text.trim()
+    if (trimmed && Object.prototype.hasOwnProperty.call(map, trimmed)) return text.replace(trimmed, () => map[trimmed])
+    for (const rule of templateRules[language === 'en' ? 0 : 1]) {
+      if (!trimmed.startsWith(rule.prefix)) continue
+      const match = rule.pattern.exec(trimmed)
+      if (!match) continue
+      const values = Object.fromEntries(rule.names.map((name, i) => [name, match[i + 1]]))
+      if (rule.names.some((name, i) => values[name] !== match[i + 1])) continue
+      return text.replace(trimmed, () => rule.target.replace(/\{\{([\p{L}_][\p{L}\p{N}_]*)\}\}|\{([\p{L}_][\p{L}\p{N}_]*)\}/gu, (placeholder, doubleName, singleName) => values[doubleName ?? singleName] ?? placeholder))
+    }
+    const pattern = patterns[language === 'en' ? 0 : 1]
+    return pattern ? text.replace(pattern, (_match, prefix, key) => prefix + map[key]) : text
+  }
+}
+
+/** Repaint a game's authored DOM without replacing controls or their listeners. */
+export function translateGameElement(root: Element, translate: (text: string) => string): void {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let node: Node | null
+  while ((node = walker.nextNode())) {
+    if ((node.parentElement?.closest('script,style,input,textarea,[data-user-content],#gg-game-language'))) continue
+    const current = node.textContent ?? ''
+    const next = translate(current)
+    if (next !== current) node.textContent = next
+  }
+  for (const element of root.querySelectorAll('[aria-label],[title],[placeholder]')) {
+    if (element.closest('[data-user-content],#gg-game-language')) continue
+    for (const attr of ['aria-label', 'title', 'placeholder']) {
+      const text = element.getAttribute(attr)
+      if (text !== null) element.setAttribute(attr, translate(text))
+    }
+  }
+}
