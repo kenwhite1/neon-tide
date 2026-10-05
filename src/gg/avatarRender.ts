@@ -1,5 +1,8 @@
 // ВНИМАНИЕ: копия GG/shared/avatarRender.ts. Не редактируй здесь -
 // правь в хабе и раскатывай: node scripts/sync-avatar-sdk.mjs <папка игры>
+import { wearPlacement } from './wearPlacement'
+import { drawWornTop } from './garmentRender'
+import { drawAvatarPhoto, photoMaterial } from './photoRender'
 // Avatar SDK, половина «рисовать»: композиция образа в <canvas>. Отдельный
 // файл потому, что здесь нужен браузер (Image, canvas), а контракт из
 // ./avatar.ts читают и сервер хаба, и любой не-браузерный потребитель.
@@ -27,6 +30,7 @@ import {
 } from './avatar'
 
 export * from './avatar'
+export { trackGamePlaytime } from './playtime'
 
 // ─── Загрузка арта ─────────────────────────────────────────────────────────
 
@@ -113,6 +117,14 @@ async function paint(
   for (const layer of AVATAR_LAYERS) {
     if (!layers.includes(layer)) continue
 
+    if (layer === 'body' && m.v.endsWith('-original-photo')) {
+      const body = makeCanvas(size)
+      await drawAvatarPhoto(body, m.colors[look.color] ?? '#f3d9a4', look.recolors?.[look.color] ?? 0, photoMaterial(look.color))
+      ctx.drawImage(body, 0, 0)
+      drew = true
+      continue
+    }
+
     if (layer === 'body') {
       // Силуэт красим заливкой (source-in), затем тень и блик поверх - тот же
       // рецепт, что у <Character> в хабе, только без SVG-маски.
@@ -136,6 +148,7 @@ async function paint(
     }
 
     if (layer === 'face') {
+      if (m.v.endsWith('-original-photo') && layers.includes('body')) continue // face is already in the photograph
       const markup = avatarFaceMarkup(m, look)
       if (!markup) continue
       const face = await loadImage(faceUrl(markup)).catch(() => null)
@@ -151,9 +164,16 @@ async function paint(
     const img = await loadImage(m.base + item.url).catch(() => null)
     if (!img) continue
     const hue = look.recolors?.[id] ?? 0
+    if (layer === 'top') {
+      drawWornTop(ctx, img, id!, size, hue)
+      drew = true
+      continue
+    }
+    ctx.save()
     if (hue && supportsFilter(ctx)) ctx.filter = `hue-rotate(${((hue % 360) + 360) % 360}deg)`
-    ctx.drawImage(img, 0, 0, size, size)
-    ctx.filter = 'none'
+    const placement = wearPlacement(id)
+    ctx.drawImage(img, placement.x * size, placement.y * size, placement.width * size, placement.height * size)
+    ctx.restore()
     drew = true
   }
 
@@ -182,15 +202,34 @@ export interface AvatarParts {
   hat: HTMLCanvasElement | null
 }
 
+/** Always available offline, with the exact photographed eyes and mouth. */
+export async function defaultAvatarParts(size = 256): Promise<AvatarParts> {
+  const source = makeCanvas(600)
+  await drawAvatarPhoto(source, '#f3d9a4')
+  const face = makeCanvas(size)
+  const ctx = face.getContext('2d')!
+  ctx.scale(size / 600, size / 600)
+  ctx.beginPath()
+  ctx.moveTo(171,194); ctx.lineTo(250,190); ctx.quadraticCurveTo(249,222,215,224); ctx.quadraticCurveTo(177,220,171,194)
+  ctx.moveTo(350,190); ctx.lineTo(428,195); ctx.quadraticCurveTo(423,221,387,225); ctx.quadraticCurveTo(352,222,350,190)
+  ctx.rect(276,283,53,9)
+  ctx.clip()
+  ctx.drawImage(source,0,0)
+  return { bodyHex: '#08707b', face, wear: null, hat: null }
+}
+
 export async function ggAvatarParts(
   m: AvatarManifest, look: AvatarLook, size = 256,
 ): Promise<AvatarParts> {
-  const [face, wear, hat] = await Promise.all([
-    ggAvatarCanvas(m, look, { size, layers: ['face', 'eyewear'] }),
+  const fixed = await defaultAvatarParts(size)
+  const [eyes, wear, hat] = await Promise.all([
+    ggAvatarCanvas(m, look, { size, layers: ['eyewear'] }),
     ggAvatarCanvas(m, look, { size, layers: ['top'] }),
     ggAvatarCanvas(m, look, { size, layers: ['hat'] }),
   ])
-  return { bodyHex: avatarBodyHex(m, look), face, wear, hat }
+  if (eyes) fixed.face!.getContext('2d')!.drawImage(eyes,0,0)
+  const hex = avatarBodyHex(m, look)
+  return { bodyHex: hex.toLowerCase() === '#f3d9a4' ? fixed.bodyHex : hex, face: fixed.face, wear, hat }
 }
 
 // ─── Одна ручка на всю интеграцию ──────────────────────────────────────────
@@ -312,7 +351,15 @@ const LS_LOOK = 'gg_look'
 function tgUserId(): number | null {
   const tg = (globalThis as { Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id?: unknown } } } } }).Telegram
   const id = tg?.WebApp?.initDataUnsafe?.user?.id
-  return typeof id === 'number' ? id : null
+  if (typeof id === 'number') return id
+  if (typeof location !== 'undefined') for (const p of [new URLSearchParams(location.search), new URLSearchParams(location.hash.replace(/^#/, ''))]) {
+    try {
+      const user = new URLSearchParams(p.get('tgWebAppData') ?? '').get('user')
+      const fromUrl = user ? JSON.parse(user).id : null
+      if (typeof fromUrl === 'number') return fromUrl
+    } catch { /* optional Telegram bridge metadata */ }
+  }
+  return null
 }
 
 function rememberLook(look: AvatarLook): void {
@@ -334,7 +381,7 @@ function recallLook(): AvatarLook | null {
     if (!raw) return null
     const j = JSON.parse(raw) as { tg?: number | null; look?: Partial<AvatarLook> }
     const tg = tgUserId()
-    if (tg !== null && typeof j.tg === 'number' && j.tg !== tg) return null
+    if (tg !== null && j.tg !== tg) return null
     return j.look ? normalizeLook(j.look) : null
   } catch { return null }
 }
@@ -361,11 +408,31 @@ function decodeLaunchParam(startParam: string | undefined): string | null {
  * аватара просто не будет, всё остальное работает как раньше.
  */
 export function ggLaunchToken(): string | null {
-  const tg = (globalThis as { Telegram?: { WebApp?: { initDataUnsafe?: { start_param?: string } } } }).Telegram
-  const fresh = decodeLaunchParam(tg?.WebApp?.initDataUnsafe?.start_param)
+  // Telegram Web and browser previews may expose launch data only in the URL.
+  // Prefer the current launch over a cached token from a previous account.
+  const tg = (globalThis as any).Telegram?.WebApp
+  const params = typeof location === 'undefined' ? [] : [
+    new URLSearchParams(location.search), new URLSearchParams(location.hash.replace(/^#/, '')),
+  ]
+  const starts = params.flatMap(p => [p.get('tgWebAppStartParam'), new URLSearchParams(p.get('tgWebAppData') ?? '').get('start_param')])
+  starts.push(tg?.initDataUnsafe?.start_param)
+  const fresh = starts.map(p => decodeLaunchParam(p ?? undefined)).find(Boolean)
   if (fresh) {
-    try { localStorage.setItem(LS_LAUNCH, fresh) } catch { /* приватный режим */ }
+    try {
+      localStorage.setItem(LS_LAUNCH, fresh)
+      localStorage.setItem('gg_launch_tg', String(tgUserId() ?? ''))
+    } catch { /* приватный режим */ }
     return fresh
   }
-  try { return localStorage.getItem(LS_LAUNCH) } catch { return null }
+  try {
+    const cached = localStorage.getItem(LS_LAUNCH)
+    if (!cached) return null
+    const claims = JSON.parse(atob(cached.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    if (claims.exp && claims.exp * 1000 <= Date.now()) return null
+    // Launch claims use the hub's internal uid, not the Telegram account id.
+    // Keep account ownership separately instead of comparing unrelated ids.
+    const user = tgUserId()
+    if (user !== null && localStorage.getItem('gg_launch_tg') !== String(user)) return null
+    return cached
+  } catch { return null }
 }

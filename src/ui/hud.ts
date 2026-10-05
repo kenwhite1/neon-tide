@@ -345,7 +345,7 @@ export class Hud {
     const b = document.createElement('div');
     b.id = 'boot';
     b.innerHTML = `
-      <div class="boot-glow"></div>
+      <div data-gg-pregame></div><div class="boot-glow"></div>
       <div class="boot-title">${t('КОРАБ')}<span>${t('ЛИК')}</span></div>
       <div class="boot-sub">${t('построй лодку · пройди пороги · забери золото')}</div>
       <button id="start-btn" disabled>${t('ЗАГРУЗКА…')}</button>

@@ -1,3 +1,4 @@
+import { GAME_MENU } from './gameMenu'
 /** Launch metadata is a UI hint. Servers still verify the signed launch token. */
 export type GameLanguage = 'ru' | 'en'
 
@@ -72,29 +73,85 @@ function watchLaunchChanges(): void {
   })
 }
 
-/** One accessible control for every game; the adapter updates the running game. */
+/** Menus own this control: removing/hiding a menu also removes/hides its settings. */
 export function installGameLanguagePicker(adapter: {
   get: () => GameLanguage
   set: (language: GameLanguage) => void | Promise<void>
   subscribe?: (changed: () => void) => (() => void)
 }): void {
   if (typeof document === 'undefined') return
-  const mount = () => {
-    if (document.getElementById('gg-game-language')) return
+  const boot = () => {
+    if (document.getElementById('gg-menu-style')) return
+    const style = document.createElement('style')
+    style.id = 'gg-menu-style'
+    style.textContent = `
+      [data-gg-pregame]{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;width:100%;flex-shrink:0;box-sizing:border-box;padding-top:var(--gg-menu-inset,0px)}
+      [data-gg-pregame]>button{flex-shrink:0;min-width:44px;min-height:44px}
+      #gg-menu-tools{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;position:relative;margin:8px auto;max-width:480px;pointer-events:auto;font:600 13px/1.3 system-ui;color:#fff}
+      #gg-menu-tools button{appearance:none;position:static;transform:none;min-width:44px;min-height:44px;margin:0;padding:10px 12px;border:1px solid #9b846638;border-radius:12px;background:#fffaf0;color:#5c4326;font:inherit;cursor:pointer;box-shadow:0 2px 0 #9b846638;touch-action:manipulation}
+      #gg-menu-tools button:focus-visible{outline:3px solid #f4cf58;outline-offset:2px}
+      #gg-game-language{display:flex;gap:3px}
+      #gg-game-language button[aria-pressed=true]{background:var(--primary,#7fb069);color:white}
+      #gg-avatar-slot{display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+      #gg-tutorial{position:fixed;inset:0;z-index:2147483001;display:grid;place-items:center;padding:calc(var(--gg-menu-safe-top,0px) + 16px) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom));background:#08101bdc;box-sizing:border-box}
+      #gg-tutorial[hidden]{display:none}
+      #gg-tutorial-card{width:min(420px,100%);max-height:100%;overflow:auto;box-sizing:border-box;border:1px solid #ffffff38;border-radius:20px;padding:24px;background:#172239;color:#fff;text-align:left;font:16px/1.6 system-ui}
+      #gg-tutorial-card h2{font:700 22px/1.3 system-ui;color:#fff;margin:0 0 16px}
+      #gg-tutorial-card p{white-space:normal;margin:12px 0 24px;color:#e8eef9}
+      #gg-tutorial-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+    `
+    document.head.append(style)
+    void import('./gg/avatarBadge').then(m => m.ggAvatarBadge({ size: 40 })).catch(() => {})
+    const safeMeasure = document.createElement('div')
+    safeMeasure.style.cssText = 'position:fixed;top:0;left:0;width:0;height:var(--gg-menu-safe-top,0px);visibility:hidden;pointer-events:none'
+    document.body.append(safeMeasure)
+    const positionHost = () => {
+      const host = document.querySelector<HTMLElement>(GAME_MENU.selector)
+      const row = document.getElementById('gg-menu-tools')
+      if (!host || !row?.getClientRects().length) return
+      if (!safeMeasure.isConnected) document.body.append(safeMeasure)
+      const safe = safeMeasure.getBoundingClientRect().height + 2
+      // Centered menus move upward when their contents grow. Measure the actual
+      // row after each adjustment so short screens and wrapped controls stay safe.
+      for (let n = 0; n < 8; n++) {
+        const missing = safe - row.getBoundingClientRect().top
+        if (missing <= 0) break
+        const padding = parseFloat(getComputedStyle(host).paddingTop) || 0
+        host.style.setProperty('--gg-menu-inset', `${padding + Math.ceil(missing * 2)}px`)
+      }
+    }
+    const hostSize = new ResizeObserver(positionHost)
+    document.addEventListener('animationend', positionHost)
+    void document.fonts?.ready.then(positionHost)
+    const safeArea = () => {
+      const tg = (window as any).Telegram?.WebApp
+      const top = Math.max(0, Number(tg?.safeAreaInset?.top) || 0)
+      const content = Math.max(0, Number(tg?.contentSafeAreaInset?.top ?? (tg?.isFullscreen ? 48 : 0)))
+      document.documentElement.style.setProperty('--gg-menu-safe-top', `max(env(safe-area-inset-top, 0px), ${top + content}px)`)
+      positionHost()
+    }
+    safeArea()
+    const tg = (window as any).Telegram?.WebApp
+    for (const event of ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged']) tg?.onEvent?.(event, safeArea)
+    window.addEventListener('resize', () => {
+      document.querySelector<HTMLElement>(GAME_MENU.selector)?.style.setProperty('--gg-menu-inset', '0px')
+      positionHost()
+    })
+    const tools = document.createElement('div')
+    tools.id = 'gg-menu-tools'
+    const slot = document.createElement('div')
+    slot.id = 'gg-avatar-slot'
     const picker = document.createElement('div')
     picker.id = 'gg-game-language'
     picker.setAttribute('role', 'group')
-    picker.style.cssText = 'position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));z-index:2147483000;display:flex;gap:2px;padding:3px;border:1px solid #ffffff40;border-radius:14px;background:#131923eF;box-shadow:0 2px 12px #0004;font:600 12px/1.2 system-ui;color:white;'
     const buttons = (['en', 'ru'] as const).map(language => {
       const button = document.createElement('button')
       button.type = 'button'
       button.textContent = language.toUpperCase()
       button.dataset.language = language
-      button.style.cssText = 'border:0;border-radius:10px;padding:8px 10px;min-height:32px;color:white;font:inherit;cursor:pointer;'
+      button.setAttribute('aria-label', language === 'ru' ? 'Русский' : 'English')
       button.addEventListener('click', async () => {
         if (adapter.get() === language) return
-        // A preview link with ?lang must follow an explicit choice too. Some
-        // games rebuild cached canvas labels by reloading the same document.
         if (new URLSearchParams(location.search).has('lang')) {
           const url = new URL(location.href)
           url.searchParams.set('lang', language)
@@ -106,28 +163,77 @@ export function installGameLanguagePicker(adapter: {
       picker.append(button)
       return button
     })
+    const help = document.createElement('button')
+    help.type = 'button'
+    help.setAttribute('aria-haspopup', 'dialog')
+    const dialog = document.createElement('div')
+    dialog.id = 'gg-tutorial'
+    dialog.hidden = true
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    dialog.setAttribute('aria-labelledby', 'gg-tutorial-title')
+    const card = document.createElement('div')
+    card.id = 'gg-tutorial-card'
+    const title = document.createElement('h2')
+    title.id = 'gg-tutorial-title'
+    const stepText = document.createElement('p')
+    const actions = document.createElement('div')
+    actions.id = 'gg-tutorial-actions'
+    const close = document.createElement('button'), back = document.createElement('button'), next = document.createElement('button')
+    for (const button of [close, back, next]) button.type = 'button'
+    actions.append(close, back, next)
+    card.append(title, stepText, actions)
+    dialog.append(card)
+    let step = 0
+    const closeGuide = () => { dialog.hidden = true; help.focus() }
+    close.onclick = closeGuide
+    back.onclick = () => { step = Math.max(0, step - 1); paint() }
+    next.onclick = () => { if (step + 1 >= GAME_MENU.steps.en.length) closeGuide(); else { step++; paint() } }
+    help.onclick = () => { step = 0; dialog.hidden = false; paint(); close.focus() }
+    dialog.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeGuide() }
+      if (event.key === 'Tab') {
+        const focusable = [close, ...(step > 0 ? [back] : []), next]
+        const index = focusable.indexOf(document.activeElement as HTMLButtonElement)
+        event.preventDefault()
+        focusable[(index + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus()
+      }
+    })
     let paintedLanguage: GameLanguage | undefined
     const paint = () => {
-      const language = adapter.get()
+      const language = adapter.get(), ru = language === 'ru'
       document.documentElement.lang = language
-      picker.setAttribute('aria-label', language === 'ru' ? 'Язык игры' : 'Game language')
-      for (const button of buttons) {
-        const active = button.dataset.language === language
-        button.setAttribute('aria-pressed', String(active))
-        button.style.background = active ? '#596cf0' : 'transparent'
-        button.setAttribute('aria-label', button.dataset.language === 'ru' ? 'Русский' : 'English')
-      }
+      picker.setAttribute('aria-label', ru ? 'Язык игры' : 'Game language')
+      buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.language === language)))
+      help.textContent = ru ? '? Как играть' : '? How to play'
+      title.textContent = `${ru ? 'Как играть' : 'How to play'} · ${step + 1}/${GAME_MENU.steps[language].length}`
+      stepText.textContent = GAME_MENU.steps[language][step]
+      close.textContent = ru ? 'Закрыть' : 'Close'
+      back.textContent = ru ? 'Назад' : 'Back'
+      back.hidden = step === 0
+      next.textContent = step + 1 === GAME_MENU.steps[language].length ? (ru ? 'Понятно' : 'Got it') : (ru ? 'Далее' : 'Next')
       if (paintedLanguage !== language) {
         paintedLanguage = language
         window.dispatchEvent(new CustomEvent('gg:language-change', { detail: language }))
       }
     }
-    document.body.append(picker)
+    tools.append(slot, picker, help)
+    // Home screens may animate with a transform, which makes a fixed child
+    // relative to the menu instead of the viewport. Keep the modal at the root.
+    document.body.append(dialog)
+    const attach = () => {
+      const host = document.querySelector<HTMLElement>(GAME_MENU.selector)
+      if (host && tools.parentElement !== host) { dialog.hidden = true; hostSize.disconnect(); host.prepend(tools); hostSize.observe(host); positionHost() }
+      else if (!host && tools.isConnected) { dialog.hidden = true; hostSize.disconnect(); tools.remove() }
+    }
+    // Route changes create new home nodes. Never keep a viewport-wide floating toggle.
+    new MutationObserver(attach).observe(document.body, { childList: true, subtree: true })
     adapter.subscribe?.(paint)
     paint()
+    attach()
   }
-  if (document.body) mount()
-  else document.addEventListener('DOMContentLoaded', mount, { once: true })
+  if (document.body) boot()
+  else document.addEventListener('DOMContentLoaded', boot, { once: true })
 }
 
 /** Only call for authored text, never player names, chat or user content. */

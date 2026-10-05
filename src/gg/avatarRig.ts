@@ -24,27 +24,24 @@
 // самое, только без привязки к доске: рост, направление взгляда и подъём
 // ступней задаются опциями.
 import * as THREE from 'three'
-import type { AvatarLook, AvatarParts, GGAvatars } from './avatarRender'
+import { defaultAvatarParts, type AvatarLook, type AvatarParts, type GGAvatars } from './avatarRender'
 
 // ── Обмер эталона ─────────────────────────────────────────────────────────
 // Полуширина силуэта на 25 равных высотах квадрата 512×512 (v=0 - верх).
 // core - тело без рук (по нему лате), outer - вместе с руками и ногами (по
 // нему оболочки, чтобы вещь не проваливалась внутрь). Снято скриптом с
 // bubl-mask.webp: если маскота перерисуют, цифры пересчитать оттуда же.
-const CORE = [
-  0.000, 0.000, 0.000, 0.000, 0.143, 0.201, 0.240, 0.266, 0.283, 0.295, 0.301, 0.326, 0.348,
-  0.361, 0.369, 0.369, 0.211, 0.156, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,
-]
-const OUTER = [
-  0.000, 0.000, 0.000, 0.000, 0.143, 0.201, 0.240, 0.266, 0.283, 0.295, 0.301, 0.326, 0.348,
-  0.361, 0.369, 0.369, 0.357, 0.156, 0.139, 0.160, 0.182, 0.000, 0.000, 0.000, 0.000,
-]
+const CORE = Array.from({ length: 49 }, (_, i) => {
+  const v = i / 48, d = (v - .45) / .345
+  return Math.abs(d) < 1 ? .325 * Math.sqrt(1 - d * d) : 0
+})
+
 /** Макушка маскота в квадрате (выше - поле под шляпу). */
-const TOP_V = 0.131
+const TOP_V = 0.105
 /** Ножки: центр капсулы, её радиус и половина длины - в долях стороны квадрата. */
 const LEG_V = 0.795, LEG_R = 0.058, LEG_HALF = 0.05
 /** Низ ступней в квадрате. */
-const FOOT_V = LEG_V + LEG_R + LEG_HALF
+const FOOT_V = 0.93
 /** Рост маскота (макушка → ступни) в долях стороны квадрата. */
 const STATURE = FOOT_V - TOP_V
 
@@ -254,17 +251,18 @@ export function buildAvatarRig(parts: AvatarParts, opts: AvatarRigOptions = {}):
     if (r <= 0) continue
     pts.push(new THREE.Vector2(r * H, yAt(i / (CORE.length - 1))))
   }
-  pts.push(new THREE.Vector2(0.03 * H, yAt(0.73)))
+  pts.push(new THREE.Vector2(0.03 * H, yAt(0.79)))
   pts.reverse()                                     // снизу вверх
-  const torso = new THREE.Mesh(new THREE.LatheGeometry(pts, 28), skin)
+  const torso = new THREE.Mesh(new THREE.LatheGeometry(pts, 48), skin)
   torso.castShadow = shadow
   body.add(torso)
 
   // ── ручки: два шарика по бокам, там же где на арте (v≈0.65).
   const arms: THREE.Mesh[] = []
   for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(new THREE.SphereGeometry(0.075 * H, 12, 10), limb)
-    arm.position.set(0, yAt(0.645), side * 0.30 * H)
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.059 * H, 0.16 * H, 6, 16), limb)
+    arm.position.set(0, yAt(0.595), side * 0.345 * H)
+    arm.rotation.x = side * -0.16
     arm.castShadow = shadow
     body.add(arm)
     arms.push(arm)
@@ -274,10 +272,15 @@ export function buildAvatarRig(parts: AvatarParts, opts: AvatarRigOptions = {}):
   const legs: THREE.Mesh[] = []
   for (const side of [-1, 1]) {
     const leg = new THREE.Mesh(new THREE.CapsuleGeometry(LEG_R * H, 2 * LEG_HALF * H, 4, 8), limb)
-    leg.position.set(0, yAt(LEG_V), side * 0.085 * H)
+    leg.position.set(0, yAt(LEG_V), side * 0.091 * H)
     leg.castShadow = shadow
     body.add(leg)
     legs.push(leg)
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), limb)
+    foot.scale.set(.09 * H, .045 * H, .08 * H)
+    foot.position.set(.025 * H, yAt(.885), side * .091 * H)
+    foot.castShadow = shadow
+    body.add(foot)
   }
 
   // ── вещи. Порядок слоёв тот же, что в хабе: одежда поверх лица, шляпа поверх
@@ -300,7 +303,7 @@ export function buildAvatarRig(parts: AvatarParts, opts: AvatarRigOptions = {}):
     const p: THREE.Vector2[] = []
     for (let i = 0; i <= STEPS; i++) {
       const v = o.to + (o.from - o.to) * (i / STEPS)
-      p.push(new THREE.Vector2(Math.max(sample(OUTER, v), o.floor) * o.inflate * H, yAt(v)))
+      p.push(new THREE.Vector2(Math.max(sample(CORE, v), o.floor) * o.inflate * H, yAt(v)))
     }
     const geo = new THREE.LatheGeometry(p, 24, (o.center ?? FRONT) - o.arc / 2, o.arc)
     if (o.spread !== undefined) {
@@ -419,19 +422,22 @@ export interface MountOptions extends AvatarRigOptions {
  * разложен): игра оставляет своего персонажа, ровно как было.
  */
 export async function mountAvatarRig(
-  av: GGAvatars | null, parent: THREE.Object3D, opts: MountOptions = {},
+  av: GGAvatars | null | Promise<GGAvatars | null>, parent: THREE.Object3D, opts: MountOptions = {},
 ): Promise<MountedAvatarRig | null> {
-  if (!av?.manifest || av.source === 'default') return null
   const size = opts.size ?? 256
-  const parts = await av.parts(size).catch(() => null)
-  if (!parts) return null
+  const deferred = av instanceof Promise ? av : null
+  const source = av instanceof Promise ? null : av
+  const parts = await source?.parts(size).catch(() => null) ?? await defaultAvatarParts(size)
 
   let rig = buildAvatarRig(parts, opts)
   parent.add(rig.group)
   opts.onRig?.(rig)
 
-  const off = av.onChange(() => {
-    void av.parts(size).then(p => {
+  let disposed = false
+  let off = () => {}
+  function refresh(source: GGAvatars) {
+    void source.parts(size).then(p => {
+      if (disposed) return
       if (!p) return
       const next = buildAvatarRig(p, opts)
       const holder = rig.group.parent ?? parent
@@ -443,11 +449,19 @@ export async function mountAvatarRig(
       rig = next
       opts.onRig?.(next)
     }).catch(() => {})
-  })
+  }
+  if (source) off = source.onChange(() => refresh(source))
+  // The physical mascot is visible before hub networking finishes. Equipped
+  // cosmetics arrive later, with the same focus/re-dress updates as before.
+  if (deferred) void deferred.then(source => {
+    if (disposed || !source) return
+    refresh(source)
+    off = source.onChange(() => refresh(source))
+  }).catch(() => {})
 
   return {
     get rig() { return rig },
-    dispose() { off(); rig.dispose() },
+    dispose() { disposed = true; off(); rig.dispose() },
   }
 }
 

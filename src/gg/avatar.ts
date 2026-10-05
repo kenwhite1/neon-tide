@@ -71,7 +71,7 @@ export const EMPTY_AVATAR_LOOK: AvatarLook = {
 export function normalizeLook(raw: Partial<AvatarLook> | null | undefined): AvatarLook {
   return {
     color: raw?.color || EMPTY_AVATAR_LOOK.color,
-    face: raw?.face || EMPTY_AVATAR_LOOK.face,
+    face: EMPTY_AVATAR_LOOK.face,
     hat: raw?.hat || EMPTY_AVATAR_LOOK.hat,
     top: raw?.top || EMPTY_AVATAR_LOOK.top,
     eyewear: raw?.eyewear || EMPTY_AVATAR_LOOK.eyewear,
@@ -188,14 +188,9 @@ export function avatarBodyHex(m: AvatarManifest, look: AvatarLook): string {
   return hueRotateHex(m.colors[look.color] ?? '#f3d9a4', look.recolors?.[look.color] ?? 0)
 }
 
-/**
- * Разметка лица с учётом перекраски тела. В хабе фильтр перекраски висит на
- * всём <Character> - вместе с телом поворачиваются и цвета лица (радужка,
- * румянец), поэтому здесь поворачиваем те же hex прямо в разметке.
- */
+/** Fixed face artwork; body recolors must not tint the eyes. */
 export function avatarFaceMarkup(m: AvatarManifest, look: AvatarLook): string | null {
   const markup = m.faces[look.face] ?? m.faces[EMPTY_AVATAR_LOOK.face]
   if (!markup) return null
-  const hue = look.recolors?.[look.color] ?? 0
-  return hue ? markup.replace(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/gi, h => hueRotateHex(h, hue)) : markup
+  return markup
 }

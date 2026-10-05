@@ -15,7 +15,7 @@ import type { Particles } from '../engine/particles';
 import type { Sfx } from '../engine/audio';
 import type { Builder } from './builder';
 import { makeAvatar } from './blocks';
-import { mountAvatarRig } from '../gg/avatarRig';
+import { mountAvatarRig, type MountedAvatarRig } from '../gg/avatarRig';
 import type { GGAvatars } from '../gg/avatarRender';
 import { tg } from '../telegram';
 import { newRunId, reportRun } from '../gg';
@@ -54,6 +54,8 @@ export class Sail {
   private lastProgressT = 0;
   private wakeClock = 0;
   private avatar: THREE.Group | null = null;
+  private captainRig: MountedAvatarRig | null = null;
+  private captainRevision = 0;
   private avatarSeat: LiveBlock | null = null;
   /** Образ игрока из хаба GG (Avatar SDK); null - капитан остаётся своим. */
   private hub: GGAvatars | null = null;
@@ -169,6 +171,7 @@ export class Sail {
    * остаётся. Образа нет (игра не из хаба) - капитан как был.
    */
   private async dressCaptain(captain: THREE.Group) {
+    const revision = ++this.captainRevision;
     const mounted = await mountAvatarRig(this.hub, captain, {
       height: 1.0,
       facing: '+z',
@@ -176,6 +179,9 @@ export class Sail {
       onRig: (rig) => { rig.group.position.z = 0.1; },
     });
     if (!mounted) return;
+    if (revision !== this.captainRevision) { mounted.dispose(); return; }
+    this.captainRig?.dispose();
+    this.captainRig = mounted;
     for (const o of captain.children) if ((o as THREE.Mesh).isMesh) o.visible = false;
   }
 

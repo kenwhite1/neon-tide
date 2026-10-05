@@ -48,21 +48,26 @@ const CORNERS: Record<string, string> = {
   'bottom-right': `bottom:${edge('bottom')};right:${edge('right')}`,
 }
 
+let mounting = false
+
 /**
  * Повесить значок. Возвращает функцию снятия — или null, когда вешать нечего
  * (игра открыта не из хаба, хаб недоступен, арт не разложен).
  */
 export async function ggAvatarBadge(opts: BadgeOptions = {}): Promise<(() => void) | null> {
   if (typeof document === 'undefined') return null
+  if (mounting || document.getElementById('gg-avatar-badge')) return null
+  mounting = true
 
   const size = Math.max(24, Math.round(opts.size ?? 44))
   const offset = Math.round(opts.offset ?? 10)
   // Без токена значок всё равно встанет, если этот клиент уже знает образ
   // игрока (зашёл из хаба раньше); незнакомому игроку - не показываем.
   const av = await ggAvatar(opts.hub ?? GG_HUB_DEFAULT, ggLaunchToken())
-  if (!av.manifest || av.source === 'default') return null
+  if (!av.manifest || av.source === 'default') { mounting = false; return null }
 
   const el = document.createElement('div')
+  el.id = 'gg-avatar-badge'
   el.setAttribute('aria-hidden', 'true')
   el.style.cssText =
     `position:fixed;z-index:2147483000;pointer-events:none;width:${size}px;height:${size}px;` +
@@ -80,10 +85,23 @@ export async function ggAvatarBadge(opts: BadgeOptions = {}): Promise<(() => voi
   }
 
   await draw(av.me)
-  if (!img) return null
-  ;(opts.parent ?? document.body).appendChild(el)
+  if (!img) { mounting = false; return null }
+  // Put the profile portrait beside the pregame settings, in normal layout.
+  // It must never cover Telegram's exit controls, scoreboards or touch sticks.
+  const attach = () => {
+    const parent = opts.parent ?? document.getElementById('gg-avatar-slot')
+    if (parent && el.parentElement !== parent) {
+      el.style.position = 'relative'
+      el.style.top = el.style.right = el.style.bottom = el.style.left = 'auto'
+      el.style.zIndex = 'auto'
+      parent.appendChild(el)
+    } else if (!parent && el.isConnected) el.remove()
+  }
+  const observer = new MutationObserver(attach)
+  observer.observe(document.body, { childList: true, subtree: true })
+  attach()
 
   // Купил шляпу в хабе, вернулся - значок обновится сам.
   const off = av.onChange(look => { void draw(look) })
-  return () => { off(); el.remove() }
+  return () => { observer.disconnect(); off(); el.remove(); mounting = false }
 }

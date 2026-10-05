@@ -481,6 +481,7 @@ button { font-family: inherit; border: none; cursor: pointer; touch-action: mani
 }
 #boot.out { opacity: 0; pointer-events: none; }
 .boot-glow {
+  pointer-events: none;
   position: absolute; left: 50%; top: 34%;
   width: 340px; height: 120px;
   transform: translate(-50%, -50%);
