@@ -130,12 +130,14 @@ export async function mountHubInvite(
     await hub('/api/sdk/invite', token, { friendIds: ids, note: opts.note });
   };
 
+  const faces = new Map<number, HTMLElement>();
   for (const f of friends) {
     const row = document.createElement('div');
     row.className = 'hub-invite-row';
     const av = document.createElement('span');
     av.className = 'hub-invite-av';
     av.style.background = f.color;
+    faces.set(f.id, av);
     const nm = document.createElement('span');
     nm.className = 'hub-invite-nm';
     nm.textContent = f.name;
@@ -166,6 +168,21 @@ export async function mountHubInvite(
     const all = list.querySelector<HTMLButtonElement>('.hub-invite-all'); if (all) all.textContent = t(all.disabled ? 'Позвали' : 'Позвать всех');
   };
   window.addEventListener('gg:language-change', repaint);
+  // Лица друзей в образе из хаба: один запрос образов на всю панель. Не
+  // получилось - остаются цветные кружки, как раньше.
+  void import('./gg/avatarRender').then(async sdk => {
+    const avatars = await sdk.ggAvatar(HUB_URL, token);
+    const looks = await avatars.looks(friends.map(f => f.id));
+    for (const f of friends) {
+      const slot = faces.get(f.id);
+      if (!slot || !looks[f.id]) continue;
+      const img = await avatars.image(64, looks[f.id]);
+      if (!img) continue;
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block';
+      slot.style.overflow = 'hidden';
+      slot.append(img);
+    }
+  }).catch(() => {});
   root.append(openBtn, list);
   host.appendChild(root);
   return root;
