@@ -80,6 +80,8 @@ export interface AvatarRenderOpts {
   layers?: readonly AvatarLayer[]
   /** Залить фон (иначе прозрачный). */
   background?: string
+  /** Фото-тело без фонового «студийного» квадрата: для спрайта в самой игре. */
+  transparent?: boolean
 }
 
 const canvasCache = new Map<string, Promise<HTMLCanvasElement | null>>()
@@ -96,15 +98,15 @@ export function ggAvatarCanvas(
 ): Promise<HTMLCanvasElement | null> {
   const size = Math.max(16, Math.round(opts.size ?? 256))
   const layers = opts.layers ?? AVATAR_LAYERS
-  const key = `${m.v}:${lookHash(look)}:${size}:${layers.join('')}:${opts.background ?? ''}`
+  const key = `${m.v}:${lookHash(look)}:${size}:${layers.join('')}:${opts.background ?? ''}:${opts.transparent ? 't' : ''}`
   let p = canvasCache.get(key)
-  if (!p) { p = paint(m, look, size, layers, opts.background); canvasCache.set(key, p) }
+  if (!p) { p = paint(m, look, size, layers, opts.background, opts.transparent); canvasCache.set(key, p) }
   return p
 }
 
 async function paint(
   m: AvatarManifest, look: AvatarLook, size: number,
-  layers: readonly AvatarLayer[], background: string | undefined,
+  layers: readonly AvatarLayer[], background: string | undefined, transparent = false,
 ): Promise<HTMLCanvasElement | null> {
   const canvas = makeCanvas(size)
   const ctx = canvas.getContext('2d')
@@ -119,7 +121,7 @@ async function paint(
 
     if (layer === 'body' && m.v.endsWith('-original-photo')) {
       const body = makeCanvas(size)
-      await drawAvatarPhoto(body, m.colors[look.color] ?? '#f3d9a4', look.recolors?.[look.color] ?? 0, photoMaterial(look.color))
+      await drawAvatarPhoto(body, m.colors[look.color] ?? '#f3d9a4', look.recolors?.[look.color] ?? 0, photoMaterial(look.color), transparent)
       ctx.drawImage(body, 0, 0)
       drew = true
       continue
@@ -275,9 +277,14 @@ export interface GGAvatars {
  * прямо с хаба по абсолютному manifest.base.
  */
 export async function ggAvatar(hubUrl: string, launchToken: string | null | undefined): Promise<GGAvatars> {
+  // Без токена (игру открыли из её бота, по ссылке комнаты или токен истёк)
+  // образ всё равно находится по Telegram id - иначе игрок видел бы
+  // кремового «Бубла» вместо своего цвета.
+  const tg = tgUserId()
+  const byTg = async (): Promise<AvatarLook | null> => (tg ? (await ggLooks(hubUrl, null, [tg]))[tg] ?? null : null)
   const [manifest, me] = await Promise.all([
     ggAvatarManifest(hubUrl),
-    launchToken ? ggLook(hubUrl, launchToken) : Promise.resolve(null),
+    (launchToken ? ggLook(hubUrl, launchToken) : Promise.resolve(null)).then(l => l ?? byTg()),
   ])
   if (me) rememberLook(me)
   const recalled = me ? null : recallLook()
@@ -289,8 +296,8 @@ export async function ggAvatar(hubUrl: string, launchToken: string | null | unde
   const subs = new Set<(look: AvatarLook) => void>()
 
   const refresh = async (): Promise<boolean> => {
-    if (!launchToken) return false
-    const next = await ggLook(hubUrl, launchToken)
+    if (!launchToken && !tg) return false
+    const next = (launchToken ? await ggLook(hubUrl, launchToken) : null) ?? await byTg()
     if (!next) return false
     rememberLook(next)
     api.source = 'hub'
@@ -321,10 +328,10 @@ export async function ggAvatar(hubUrl: string, launchToken: string | null | unde
       manifest ? ggAvatarImage(manifest, look, { size }) : Promise.resolve(null),
     parts: (size = 256, look = mine) =>
       manifest ? ggAvatarParts(manifest, look, size) : Promise.resolve(null),
-    looks: uids => (launchToken ? ggLooks(hubUrl, launchToken, uids) : Promise.resolve({})),
+    looks: uids => ggLooks(hubUrl, launchToken, uids),
     refresh,
     onChange(cb) {
-      if (!launchToken || typeof document === 'undefined') return () => {}
+      if ((!launchToken && !tg) || typeof document === 'undefined') return () => {}
       if (!subs.size) {
         document.addEventListener('visibilitychange', tick)
         window.addEventListener('focus', tick)

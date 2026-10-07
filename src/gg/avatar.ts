@@ -128,14 +128,17 @@ export async function ggLook(hubUrl: string, launchToken: string): Promise<Avata
   } catch { return null }
 }
 
-/** Образы других игроков лобби: до 64 id за вызов. Пустой ответ - не беда. */
-export async function ggLooks(hubUrl: string, launchToken: string, uids: number[]): Promise<Record<number, AvatarLook>> {
+/** Образы игроков по Telegram id: до 64 id за вызов. Пустой ответ - не беда.
+ *  Без токена запуска (игру открыли из её бота или по ссылке комнаты) идём в
+ *  публичную ручку: образ - это только надетая косметика, и игра всё равно
+ *  показывает его каждому соседу по лобби. */
+export async function ggLooks(hubUrl: string, launchToken: string | null | undefined, uids: number[]): Promise<Record<number, AvatarLook>> {
   const ids = [...new Set(uids.filter(n => Number.isFinite(n) && n > 0))].slice(0, 64)
-  if (!ids.length || !launchToken) return {}
+  if (!ids.length) return {}
   try {
-    const r = await fetch(`${hubBase(hubUrl)}/api/sdk/looks`, {
+    const r = await fetch(`${hubBase(hubUrl)}/api/sdk/looks${launchToken ? '' : '/public'}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-gg-launch': launchToken },
+      headers: launchToken ? { 'content-type': 'application/json', 'x-gg-launch': launchToken } : { 'content-type': 'application/json' },
       body: JSON.stringify({ uids: ids }),
     })
     if (!r.ok) return {}
