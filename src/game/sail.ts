@@ -173,7 +173,7 @@ export class Sail {
   private async dressCaptain(captain: THREE.Group) {
     const revision = ++this.captainRevision;
     const mounted = await mountAvatarRig(this.hub, captain, {
-      height: 1.0,
+      height: 1.15,
       facing: '+z',
       lift: -0.27, // капитан висит на 0.2 над блоком, подушка - на -0.07
       onRig: (rig) => { rig.group.position.z = 0.1; },

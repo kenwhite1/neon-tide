@@ -40,10 +40,11 @@ export function makeBlockGroup(kind: BlockKind, accent = 0x66e0ff): THREE.Group 
   switch (kind) {
     case 'seat': {
       add(new THREE.Mesh(slab(), std(kind))).position.y = -0.28;
-      const back = add(new THREE.Mesh(geo('seatback', () => new RoundedBoxGeometry(0.9, 0.8, 0.22, 2, 0.06)), std(kind)));
-      back.position.set(0, 0.1, -0.38);
+      // Low back: the chase camera sits behind the boat, and a tall back hid the captain.
+      const back = add(new THREE.Mesh(geo('seatback', () => new RoundedBoxGeometry(0.9, 0.5, 0.22, 2, 0.06)), std(kind)));
+      back.position.set(0, -0.05, -0.38);
       const glow = add(new THREE.Mesh(geo('seattrim', () => new THREE.BoxGeometry(0.94, 0.05, 0.05)), new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 1.6 })), false);
-      glow.position.set(0, 0.46, -0.38);
+      glow.position.set(0, 0.18, -0.38);
       break;
     }
     case 'thruster': {

@@ -39,7 +39,7 @@ const CORE = Array.from({ length: 49 }, (_, i) => {
 /** Макушка маскота в квадрате (выше - поле под шляпу). */
 const TOP_V = 0.105
 /** Ножки: центр капсулы, её радиус и половина длины - в долях стороны квадрата. */
-const LEG_V = 0.795, LEG_R = 0.058, LEG_HALF = 0.05
+const LEG_V = 0.795, LEG_R = 0.063, LEG_HALF = 0.05
 /** Низ ступней в квадрате. */
 const FOOT_V = 0.93
 /** Рост маскота (макушка → ступни) в долях стороны квадрата. */
@@ -63,6 +63,30 @@ function texture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
   return tex
 }
 
+/**
+ * Матовая «глина» с контровым светом. Без него тёмный «Бубл» в игровых сценах
+ * (камера сзади, солнце спереди) читается чёрным шаром без формы: рим по
+ * краю силуэта даёт объём с любого ракурса, а подъём теней - цвет игрока даже
+ * в тени. Рим считается от нормали и взгляда - света сцены он не требует.
+ * Оба - в шейдере, а не в emissive: emissive остаётся свободным для игр
+ * (вспышка попадания, подсветка выбранного), как у обычного материала.
+ */
+function clayMaterial(params: THREE.MeshStandardMaterialParameters, rim: THREE.Color, lift: THREE.Color): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0, ...params })
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.ggRim = { value: rim }
+    shader.uniforms.ggLift = { value: lift }
+    shader.fragmentShader = 'uniform vec3 ggRim;\nuniform vec3 ggLift;\n' + shader.fragmentShader.replace(
+      '#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n' +
+      '  float ggFres = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);\n' +
+      '  totalEmissiveRadiance += ggLift + ggRim * pow(ggFres, 2.6);',
+    )
+  }
+  mat.customProgramCacheKey = () => 'gg-clay'
+  return mat
+}
+
 function decalMaterial(tex: THREE.Texture, flat: boolean, exposure = 1): THREE.Material {
   const common = {
     map: tex, color: new THREE.Color(exposure, exposure, exposure),
@@ -70,7 +94,7 @@ function decalMaterial(tex: THREE.Texture, flat: boolean, exposure = 1): THREE.M
   }
   return flat
     ? new THREE.MeshBasicMaterial(common)
-    : new THREE.MeshStandardMaterial({ ...common, roughness: 0.75, metalness: 0 })
+    : clayMaterial({ ...common, roughness: 0.8 }, new THREE.Color(0.22 * exposure, 0.22 * exposure, 0.24 * exposure), new THREE.Color(0, 0, 0))
 }
 
 /**
@@ -236,12 +260,20 @@ export function buildAvatarRig(parts: AvatarParts, opts: AvatarRigOptions = {}):
   turn.rotation.y = FACING_YAW[opts.facing ?? '+z']
   const body = new THREE.Group()
 
-  const solid = (hex: THREE.ColorRepresentation, rough: number): THREE.Material => flat
+  const bodyColor = new THREE.Color(parts.bodyHex)
+  // Рим - цвет тела, высветленный к тёплому белому; подъём теней - сам цвет
+  // тела, приглушённый: тень остаётся цветной, а не чёрной.
+  const rim = bodyColor.clone().lerp(new THREE.Color(0xfff4e0), 0.55).multiplyScalar(0.5 * exposure)
+  const solid = (hex: THREE.Color, rough: number): THREE.Material => flat
     ? new THREE.MeshBasicMaterial({ color: hex })
-    : new THREE.MeshStandardMaterial({ color: hex, roughness: rough, metalness: 0 })
-  const skin = solid(new THREE.Color(parts.bodyHex).multiplyScalar(exposure), 0.58)
+    : clayMaterial({ color: hex, roughness: rough }, rim, hex.clone().multiplyScalar(0.2))
+  const skin = solid(bodyColor.clone().multiplyScalar(exposure), 0.8)
   // Конечности чуть темнее тела - иначе «Бубл» читается одним пятном.
-  const limb = solid(new THREE.Color(parts.bodyHex).multiplyScalar(0.86 * exposure), 0.62)
+  const limb = solid(bodyColor.clone().multiplyScalar(0.88 * exposure), 0.84)
+  // Шов по экватору, как на маскоте: тело - две половинки.
+  const seamMat = flat
+    ? new THREE.MeshBasicMaterial({ color: bodyColor.clone().multiplyScalar(0.55 * exposure) })
+    : new THREE.MeshStandardMaterial({ color: bodyColor.clone().multiplyScalar(0.62 * exposure), roughness: 0.9, metalness: 0 })
 
   // ── тело: лате по core-профилю, почти нулевые радиусы на концах закрывают
   // каплю сверху и снизу.
@@ -257,30 +289,49 @@ export function buildAvatarRig(parts: AvatarParts, opts: AvatarRigOptions = {}):
   torso.castShadow = shadow
   body.add(torso)
 
-  // ── ручки: два шарика по бокам, там же где на арте (v≈0.65).
+  const SEAM_V = 0.5
+  const seam = new THREE.Mesh(new THREE.TorusGeometry(sample(CORE, SEAM_V) * H, 0.0045 * H, 6, 64), seamMat)
+  seam.rotation.x = Math.PI / 2
+  seam.position.y = yAt(SEAM_V)
+  body.add(seam)
+
+  // ── ручки: «варежки»-капли по бокам, как на маскоте - узкие у плеча,
+  // толстые и круглые внизу. Центр меша - середина ручки (игры двигают
+  // arms[i].position от этой точки), свисают чуть наружу.
+  const mitten = (() => {
+    const half = 0.15 * H, w = 0.064 * H
+    const p: THREE.Vector2[] = []
+    for (let i = 0; i <= 20; i++) {
+      const s = (i / 20) * Math.PI                      // 0 - низ, π - верх
+      const y = -Math.cos(s) * half
+      p.push(new THREE.Vector2(Math.max(1e-4, Math.sin(s) * w * (1 - 0.32 * (y / half))), y))
+    }
+    return new THREE.LatheGeometry(p, 20)
+  })()
   const arms: THREE.Mesh[] = []
   for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.059 * H, 0.16 * H, 6, 16), limb)
-    arm.position.set(0, yAt(0.595), side * 0.345 * H)
-    arm.rotation.x = side * -0.16
+    const arm = new THREE.Mesh(side < 0 ? mitten : mitten.clone(), limb)
+    arm.position.set(0, yAt(0.6), side * 0.34 * H)
+    arm.rotation.x = side * -0.2
     arm.castShadow = shadow
     body.add(arm)
     arms.push(arm)
   }
 
-  // ── ножки: короткие капсулы от бёдер до ступней.
+  // ── ножки: короткие капсулы от бёдер до ступней; ступня - дочерняя, чтобы
+  // шагала вместе с ногой, а не оставалась на месте.
   const legs: THREE.Mesh[] = []
   for (const side of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(LEG_R * H, 2 * LEG_HALF * H, 4, 8), limb)
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(LEG_R * H, 2 * LEG_HALF * H, 6, 14), limb)
     leg.position.set(0, yAt(LEG_V), side * 0.091 * H)
     leg.castShadow = shadow
     body.add(leg)
     legs.push(leg)
-    const foot = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), limb)
-    foot.scale.set(.09 * H, .045 * H, .08 * H)
-    foot.position.set(.025 * H, yAt(.885), side * .091 * H)
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), limb)
+    foot.scale.set(.095 * H, .052 * H, .074 * H)
+    foot.position.set(.03 * H, yAt(.878) - yAt(LEG_V), 0)
     foot.castShadow = shadow
-    body.add(foot)
+    leg.add(foot)
   }
 
   // ── вещи. Порядок слоёв тот же, что в хабе: одежда поверх лица, шляпа поверх
@@ -371,7 +422,10 @@ export function buildAvatarRig(parts: AvatarParts, opts: AvatarRigOptions = {}):
       arms.forEach((arm, i) => {
         const rest = armRest[i]
         if (!rest) return
-        arm.position.x = rest.x - s * (i === 0 ? 1 : -1) * 0.05 * H * k
+        const dir = i === 0 ? 1 : -1
+        arm.position.x = rest.x - s * dir * 0.05 * H * k
+        // Варежка покачивается вперёд-назад, а не только едет.
+        arm.rotation.z = s * dir * 0.35 * k
       })
     },
     dispose() { disposeAvatarRig(group) },
