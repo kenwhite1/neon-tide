@@ -1,3 +1,4 @@
+import { initGameVolume, getGameVolume, setGameVolume, subscribeGameVolume, gameAudioOutput, installGameVolume } from '../gameVolume'
 // Tiny WebAudio synth - no assets, arcade-flavored blips and booms.
 
 type SoundName =
@@ -11,6 +12,13 @@ export class Sfx {
   private thrustNodes: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
   muted = localStorage.getItem('neon-tide-mute') === '1';
 
+  constructor() {
+    initGameVolume(this.muted ? 0 : 1);
+    this.muted = getGameVolume() === 0;
+    subscribeGameVolume(v => { this.muted = v === 0; });
+    installGameVolume();
+  }
+
   unlock() {
     if (this.ctx) {
       if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -19,8 +27,8 @@ export class Sfx {
     try {
       this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.5;
-      this.master.connect(this.ctx.destination);
+      this.master.gain.value = 0.5;
+      this.master.connect(gameAudioOutput(this.ctx));
       const len = this.ctx.sampleRate;
       this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
       const d = this.noiseBuf.getChannelData(0);
@@ -29,9 +37,8 @@ export class Sfx {
   }
 
   setMuted(m: boolean) {
-    this.muted = m;
+    setGameVolume(m ? 0 : getGameVolume() || 1);
     localStorage.setItem('neon-tide-mute', m ? '1' : '0');
-    if (this.master) this.master.gain.value = m ? 0 : 0.5;
   }
 
   private osc(type: OscillatorType, f0: number, f1: number, dur: number, gain: number, when = 0) {

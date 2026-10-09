@@ -1,3 +1,4 @@
+import { bindGameVolumeButton } from '../gameVolume';
 import { BLOCKS, PALETTE_ORDER, QUESTS, TEAM_COLORS, TIERS, tierOfStage } from '../config';
 import { L, t } from '../i18n';
 import type { BlockKind, RunStats } from '../types';
@@ -322,10 +323,7 @@ export class Hud {
       });
       sw.appendChild(b);
     });
-    m.querySelector('#mute-btn')!.addEventListener('click', (e) => {
-      this.sfx.setMuted(!this.sfx.muted);
-      (e.target as HTMLElement).textContent = this.sfx.muted ? t('ВЫКЛ') : t('ВКЛ');
-    });
+    bindGameVolumeButton(m.querySelector('#mute-btn') as HTMLElement);
     m.querySelector('#share-btn')!.addEventListener('click', () => {
       this.cb.onShareBoat();
       this.closeModal();
