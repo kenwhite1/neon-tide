@@ -11,6 +11,9 @@ let label: HTMLSpanElement
 let anchor: HTMLElement | null = null
 let floating: HTMLButtonElement | null = null
 let watchingLanguage = false
+let menuOnly = true
+let menuButton: HTMLButtonElement | null = null
+let watchingMenu = false
 
 function storedVolume(): number | null {
   try {
@@ -106,6 +109,10 @@ function ensurePanel(): void {
   window.addEventListener('resize', positionPanel)
 }
 export function openGameVolume(button?: HTMLElement): void {
+  if (menuOnly) {
+    if (!menuButton?.isConnected || !menuButton.getClientRects().length || getComputedStyle(menuButton).visibility === 'hidden') { closePanel(); return }
+    button = menuButton
+  }
   initGameVolume()
   ensurePanel()
   const wasOpen = !panel!.hidden && anchor === (button ?? null)
@@ -115,6 +122,13 @@ export function openGameVolume(button?: HTMLElement): void {
   if (!panel!.hidden) slider.focus({ preventScroll: true })
 }
 export function bindGameVolumeButton(button: HTMLElement): () => void {
+  // Old HUD/settings controls stay inert; games have one control in the pregame row.
+  if (menuOnly && button !== menuButton) {
+    button.hidden = true
+    button.style.setProperty('display', 'none', 'important')
+    button.setAttribute('aria-hidden', 'true')
+    return () => {}
+  }
   if (!watchingLanguage) { watchingLanguage = true; window.addEventListener('gg:language-change', paint) }
   buttons.add(button)
   button.dataset.ggVolume = 'true'
@@ -125,12 +139,39 @@ export function bindGameVolumeButton(button: HTMLElement): () => void {
   paint()
   return () => { buttons.delete(button); button.removeEventListener('click', click) }
 }
-/** A fallback remains available when a game has no visible settings button. */
-export function installGameVolume(audio?: { volume: number; setVolume(value: number): void }, existing?: HTMLElement | null): void {
+/** Mount beside the language picker and let the same menu own visibility. */
+function installMenuVolume(): void {
+  if (watchingMenu) return
+  watchingMenu = true
+  menuButton = document.createElement('button')
+  menuButton.id = 'gg-volume-button'
+  bindGameVolumeButton(menuButton)
+  const closeIfHidden = () => {
+    if (panel && !panel.hidden && (!menuButton!.isConnected || !menuButton!.getClientRects().length || getComputedStyle(menuButton!).visibility === 'hidden')) closePanel()
+  }
+  const attach = () => {
+    const picker = document.getElementById('gg-game-language')
+    if (picker?.parentElement && menuButton!.parentElement !== picker.parentElement) picker.after(menuButton!)
+    else if (!picker && menuButton!.isConnected) menuButton!.remove()
+    closeIfHidden()
+  }
+  new MutationObserver(attach).observe(document.body, { childList: true, subtree: true })
+  // Covers menus hidden with CSS as well as route changes that remove the node.
+  new ResizeObserver(closeIfHidden).observe(menuButton)
+  attach()
+}
+/** Games use the pregame row. The hub retains its own settings controls. */
+export function installGameVolume(audio?: { volume: number; setVolume(value: number): void }, existing?: HTMLElement | null, options: { menuOnly?: boolean } = {}): void {
   if (typeof document === 'undefined') return
+  if (options.menuOnly === false) menuOnly = false
   initGameVolume(audio?.volume ?? 1)
   if (audio) { audio.setVolume(volume); subscribeGameVolume(v => audio.setVolume(v)) }
   const boot = () => {
+    if (menuOnly) {
+      if (existing) { existing.onclick = null; bindGameVolumeButton(existing) }
+      installMenuVolume()
+      return
+    }
     if (existing) { existing.onclick = null; bindGameVolumeButton(existing); return }
     if (floating) return
     floating = document.createElement('button'); floating.id = 'gg-volume-button'
