@@ -6,9 +6,11 @@
 //   node server/relay.mjs               - standalone on RELAY_PORT (default 8791)
 
 import { WebSocketServer } from 'ws';
+import { pathToFileURL } from 'node:url';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const genCode = () => Array.from({ length: 5 }, () => ALPHABET[(Math.random() * ALPHABET.length) | 0]).join('');
+const MAX_PLAYERS = 6;
 const genId = () => Math.random().toString(36).slice(2, 10);
 
 function send(ws, msg) {
@@ -37,20 +39,31 @@ function wireRelay(wss, label) {
 
       switch (msg.t) {
         case 'hello': {
+          if (ws.roomCode) return; // one room per connection
           let code = String(msg.room || '').toUpperCase().slice(0, 8);
-          if (msg.create) {
+          const newRoom = (quick) => {
             code = genCode();
             while (rooms.has(code)) code = genCode();
-            rooms.set(code, { clients: new Map(), players: new Map(), host: ws.id, design: [] });
-          }
+            rooms.set(code, { clients: new Map(), players: new Map(), host: ws.id, design: [], quick, sailing: false });
+          };
+          if (msg.quick) {
+            // Quick match: join the fullest open public crew that is still building.
+            let best = null;
+            for (const [c, r] of rooms) {
+              if (!r.quick || r.sailing || r.clients.size >= MAX_PLAYERS) continue;
+              if (!best || r.clients.size > rooms.get(best).clients.size) best = c;
+            }
+            if (best) code = best;
+            else newRoom(true);
+          } else if (msg.create) newRoom(false);
           const r = rooms.get(code);
           if (!r) return send(ws, { t: 'err', msg: 'Room not found' });
-          if (r.clients.size >= 6) return send(ws, { t: 'err', msg: 'Room is full' });
+          if (r.clients.size >= MAX_PLAYERS) return send(ws, { t: 'err', msg: 'Room is full' });
           ws.roomCode = code;
           r.clients.set(ws.id, ws);
           const player = { id: ws.id, name: String(msg.name || 'Captain').slice(0, 24), color: r.players.size % 7 };
           r.players.set(ws.id, player);
-          send(ws, { t: 'joined', room: code, you: ws.id, host: r.host, players: playerList(r), design: r.design });
+          send(ws, { t: 'joined', room: code, you: ws.id, host: r.host, players: playerList(r), design: r.design, quick: !!r.quick });
           broadcast(r, { t: 'player+', p: player }, ws.id);
           break;
         }
@@ -81,6 +94,7 @@ function wireRelay(wss, label) {
         }
         case 'launch': {
           if (!room || ws.id !== room.host) return;
+          room.sailing = true; // quick match stops offering this crew while it sails
           broadcast(room, { t: 'launch', from: ws.id }, ws.id);
           break;
         }
@@ -97,6 +111,7 @@ function wireRelay(wss, label) {
         }
         case 'ev': {
           if (!room || ws.id !== room.host) return;
+          if (msg.ev && msg.ev.k === 'end') room.sailing = false; // back to building: open again
           broadcast(room, { t: 'ev', ev: msg.ev }, ws.id);
           break;
         }
@@ -147,4 +162,5 @@ export function startStandalone(port = Number(process.env.RELAY_PORT || 8791)) {
 }
 
 // Run directly → standalone.
-if (import.meta.url === `file://${process.argv[1]}`) startStandalone();
+// (pathToFileURL handles spaces in the folder path, e.g. "game is game inc")
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) startStandalone();

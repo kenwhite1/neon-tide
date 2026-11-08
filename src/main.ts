@@ -128,8 +128,10 @@ async function boot() {
     else if (net.isHost) net.sendDesign(builder.design());
     hud.toast(`⚓ ${t('Комната')} ${net.room} - ${net.isHost ? t('ХОСТ') : t('в команде')}`);
   };
+  let mpSlot: HTMLElement | null = null;
   net.onPlayers = () => {
     if (net.inRoom) hud.toast(`${t('Команда')}: ${net.players.map((p) => p.name).join(', ')}`);
+    if (mpSlot?.isConnected) renderMp(mpSlot);
   };
   net.onLaunch = () => {
     if (state.phase === 'build') sail.begin(builder.design(), true);
@@ -145,13 +147,29 @@ async function boot() {
   net.onLeft = () => hud.toast(t('Вышел из комнаты - снова соло'));
 
   const renderMp = (slot: HTMLElement) => {
+    mpSlot = slot;
     if (!net.inRoom) {
       slot.innerHTML = `
-        <div class="set-row"><span>${t('Мультиплеер')}</span><span style="display:flex;gap:6px">
+        <div class="set-row"><button class="mini-btn" id="mp-quick" style="flex:1">⚡ ${t('БЫСТРАЯ ИГРА')}</button></div>
+        <div class="set-row"><span>${t('Своя комната')}</span><span style="display:flex;gap:6px">
           <button class="mini-btn" id="mp-create">${t('СОЗДАТЬ')}</button>
           <button class="mini-btn" id="mp-join">${t('ВОЙТИ')}</button></span></div>
         <div id="mp-join-row" class="hidden set-row"><input id="mp-code" maxlength="5" placeholder="${t('КОД')}" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:10px;color:#fff;padding:8px 10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;font-size:14px;min-width:0"/><button class="mini-btn" id="mp-go">${t('ОК')}</button></div>`;
       void mountHubInvite(slot, { note: t('Заходи ко мне в Кораблик!'), t });
+      slot.querySelector('#mp-quick')!.addEventListener('click', () => {
+        const btn = slot.querySelector('#mp-quick') as HTMLButtonElement;
+        btn.disabled = true;
+        btn.textContent = `⏳ ${t('Ищем команду...')}`;
+        net.join(null, true)
+          .then(() => {
+            renderMp(slot);
+            hud.toast(net.players.length > 1 ? t('Ты в команде! Стройте лодку вместе') : t('Открыта общая команда - игроки подключатся, пока строишь'));
+          })
+          .catch((e) => {
+            hud.toast(`⚠️ ${e.message}`);
+            renderMp(slot);
+          });
+      });
       slot.querySelector('#mp-create')!.addEventListener('click', () => {
         net.join(null)
           .then(() => renderMp(slot))
@@ -170,7 +188,7 @@ async function boot() {
       });
     } else {
       slot.innerHTML = `
-        <div class="set-row"><span>${t('Комната')} <b style="color:var(--accent);letter-spacing:2px">${net.room}</b>${net.isHost ? ' 👑' : ''}</span>
+        <div class="set-row"><span>${net.quick ? `⚡ ${t('Общая команда')}` : `${t('Комната')} <b style="color:var(--accent);letter-spacing:2px">${net.room}</b>`}${net.isHost ? ' 👑' : ''} <span style="opacity:.6">${net.players.length}/6</span></span>
         <span style="display:flex;gap:6px"><button class="mini-btn" id="mp-invite">${t('ПРИГЛАСИТЬ')}</button><button class="mini-btn danger" id="mp-leave">${t('ВЫЙТИ')}</button></span></div>
         <div style="font-size:12px;opacity:.7;font-weight:600;padding:4px 2px">${net.players.map((p) => p.name).join(' · ')}</div>`;
       slot.querySelector('#mp-invite')!.addEventListener('click', () => {

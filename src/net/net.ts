@@ -18,6 +18,8 @@ function defaultRelayUrl(): string {
 export class Net {
   private ws: WebSocket | null = null;
   room = '';
+  /** true when this is a public quick-match crew, not a private code room */
+  quick = false;
   you = '';
   hostId = '';
   players: NetPlayer[] = [];
@@ -42,7 +44,7 @@ export class Net {
   onError: ((msg: string) => void) | null = null;
   onLeft: (() => void) | null = null;
 
-  join(roomCode: string | null): Promise<string> {
+  join(roomCode: string | null, quick = false): Promise<string> {
     this.leave();
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -63,7 +65,7 @@ export class Net {
         }
       };
       ws.onopen = () => {
-        this.send({ t: 'hello', room: roomCode ?? '', create: !roomCode, name: tg.user.name });
+        this.send({ t: 'hello', room: roomCode ?? '', create: !roomCode && !quick, quick, name: tg.user.name });
       };
       ws.onmessage = (e) => {
         let msg: S2C;
@@ -75,6 +77,7 @@ export class Net {
         switch (msg.t) {
           case 'joined':
             this.room = msg.room;
+            this.quick = !!msg.quick;
             this.you = msg.you;
             this.hostId = msg.host;
             this.players = msg.players;
@@ -134,6 +137,7 @@ export class Net {
       this.ws = null;
     }
     this.room = '';
+    this.quick = false;
     this.you = '';
     this.players = [];
   }

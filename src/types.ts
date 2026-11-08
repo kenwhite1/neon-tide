@@ -61,7 +61,7 @@ export interface NetPlayer {
 }
 
 export type C2S =
-  | { t: 'hello'; room: string; create: boolean; name: string }
+  | { t: 'hello'; room: string; create: boolean; quick?: boolean; name: string }
   | { t: 'place'; b: PlacedBlock }
   | { t: 'remove'; key: string }
   | { t: 'clear' }
@@ -72,7 +72,7 @@ export type C2S =
   | { t: 'ev'; ev: NetEvent };
 
 export type S2C =
-  | { t: 'joined'; room: string; you: string; host: string; players: NetPlayer[]; design: Design }
+  | { t: 'joined'; room: string; you: string; host: string; players: NetPlayer[]; design: Design; quick?: boolean }
   | { t: 'player+'; p: NetPlayer }
   | { t: 'player-'; id: string; host: string }
   | { t: 'place'; b: PlacedBlock; from: string }
